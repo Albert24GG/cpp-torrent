@@ -6,6 +6,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace Bencode {
 
@@ -107,6 +108,8 @@ namespace {
             return parse_string(input);
         throw std::runtime_error(get_err_msg("Invalid bencode value."));
     }
+
+    std::unreachable();
 }
 }  // namespace
 

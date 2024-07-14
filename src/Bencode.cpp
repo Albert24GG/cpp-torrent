@@ -95,15 +95,18 @@ namespace {
     if (input.eof())
         throw std::runtime_error(get_err_msg("Unexpected end of file. Expected a bencode value."));
 
-    if (isdigit(c))
-        return parse_string(input);
-    if (c == 'i')
+    switch (c) {
+    case 'i':
         return parse_int(input);
-    if (c == 'l')
+    case 'l':
         return parse_list(input);
-    if (c == 'd')
+    case 'd':
         return parse_dict(input);
-    throw std::runtime_error(get_err_msg("Invalid bencode value."));
+    default:
+        if (isdigit(c) != 0)
+            return parse_string(input);
+        throw std::runtime_error(get_err_msg("Invalid bencode value."));
+    }
 }
 }  // namespace
 

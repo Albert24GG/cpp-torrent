@@ -45,6 +45,9 @@ namespace {
 
     std::getline(input, integer_str, 'e');
 
+    if (!input.good())
+        throw std::runtime_error(get_err_msg("Invalid integer."));
+
     BencodeInt parsed_integer{};
 
     const char* end{integer_str.data() + integer_str.size()};
@@ -114,12 +117,16 @@ namespace {
 }  // namespace
 
 [[nodiscard]] BencodeItem BDecode(std::istream& input) {
-    return parse(input);
+    BencodeItem res = parse(input);
+    if (input.peek() != EOF)
+        throw std::runtime_error(
+            get_err_msg("Invalid bencode. Unconsumed bytes left in the stream."));
+    return res;
 }
 
 [[nodiscard]] BencodeItem BDecode(const std::string& input) {
     std::istringstream stream(input);
-    return parse(stream);
+    return BDecode(stream);
 }
 
 }  // namespace Bencode

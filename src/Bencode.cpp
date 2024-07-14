@@ -9,6 +9,8 @@
 
 namespace Bencode {
 
+namespace {
+
 [[nodiscard]] BencodeItem parse(std::istream& input);
 
 [[nodiscard]] BencodeItem parse_string(std::istream& input) {
@@ -103,6 +105,7 @@ namespace Bencode {
         return parse_dict(input);
     throw std::runtime_error(get_err_msg("Invalid bencode value."));
 }
+}  // namespace
 
 [[nodiscard]] BencodeItem BDecode(std::istream& input) {
     return parse(input);

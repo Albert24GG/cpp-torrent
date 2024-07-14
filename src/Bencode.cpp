@@ -82,7 +82,7 @@ namespace {
     while (input.good() && (next_ch = input.get()) != 'e') {
         input.unget();
 
-        std::string key{std::move(std::get<BencodeString>(parse(input)))};
+        std::string key{std::get<BencodeString>(parse(input))};
 
         parsed_dict.insert({key, parse(input)});
     }

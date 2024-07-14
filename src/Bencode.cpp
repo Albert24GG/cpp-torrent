@@ -1,10 +1,9 @@
 #include "Bencode.hpp"
-#include "Error.h"
+#include "Error.hpp"
 
 #include <charconv>
 #include <istream>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -28,16 +27,16 @@ namespace {
 
     if (ec == std::errc() && p == length_str.data() + length_str.size()) {
         if (length > MAX_STRING_LEN)
-            throw std::runtime_error(get_err_msg("String length exceeds maximum allowed length."));
+            err::throw_with_trace("String length exceeds maximum allowed length.");
 
         std::string str;
         str.resize(length);
         input.read(str.data(), length);
         if (input.fail())
-            throw std::runtime_error(get_err_msg("Invalid string: not enough bytes provided"));
+            err::throw_with_trace("Invalid string: not enough bytes provided");
         return BencodeItem{std::move(str)};
     }
-    throw std::runtime_error(get_err_msg("Invalid string length."));
+    err::throw_with_trace("Invlaid string length.");
 }
 
 [[nodiscard]] BencodeItem parse_int(std::istream& input) {
@@ -46,7 +45,7 @@ namespace {
     std::getline(input, integer_str, 'e');
 
     if (!input.good())
-        throw std::runtime_error(get_err_msg("Invalid integer."));
+        err::throw_with_trace("Invalid integer.");
 
     BencodeInt parsed_integer{};
 
@@ -57,7 +56,7 @@ namespace {
     if (ec == std::errc() && p == end)
         return BencodeItem(parsed_integer);
     else
-        throw std::runtime_error(get_err_msg("Invalid integer."));
+        err::throw_with_trace("Invalid integer.");
 }
 
 [[nodiscard]] BencodeItem parse_list(std::istream& input) {
@@ -70,7 +69,7 @@ namespace {
     }
 
     if (next_ch != 'e')
-        throw std::runtime_error(get_err_msg("Invalid list: no list end provided."));
+        err::throw_with_trace("Invalid list: no end provided");
 
     return BencodeItem(std::move(parsed_list));
 }
@@ -88,7 +87,7 @@ namespace {
     }
 
     if (next_ch != 'e')
-        throw std::runtime_error(get_err_msg("Invalid dictionary: no dictionary end provided."));
+        err::throw_with_trace("Invalid dictionary: no end provided.");
 
     return BencodeItem(std::move(parsed_dict));
 }
@@ -97,7 +96,7 @@ namespace {
     int c = input.get();
 
     if (input.eof())
-        throw std::runtime_error(get_err_msg("Unexpected end of file. Expected a bencode value."));
+        err::throw_with_trace("Unexpected end of file. Expected a bencode value.");
 
     switch (c) {
     case 'i':
@@ -109,7 +108,7 @@ namespace {
     default:
         if (isdigit(c) != 0)
             return parse_string(input);
-        throw std::runtime_error(get_err_msg("Invalid bencode value."));
+        err::throw_with_trace("Invalid bencode value");
     }
 
     std::unreachable();
@@ -119,8 +118,7 @@ namespace {
 [[nodiscard]] BencodeItem BDecode(std::istream& input) {
     BencodeItem res = parse(input);
     if (input.peek() != EOF)
-        throw std::runtime_error(
-            get_err_msg("Invalid bencode. Unconsumed bytes left in the stream."));
+        err::throw_with_trace("Invalid bencode input. Unconsumed bytes left in the stream.");
     return res;
 }
 

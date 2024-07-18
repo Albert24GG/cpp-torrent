@@ -14,6 +14,7 @@ namespace {
 [[nodiscard]] BencodeItem parse(std::istream& input);
 
 [[nodiscard]] BencodeItem parse_string(std::istream& input) {
+    std::streampos start_pos{input.tellg() - static_cast<std::streampos>(1)};
     // unget the first digit of the string length
     input.unget();
 
@@ -34,12 +35,16 @@ namespace {
         input.read(str.data(), length);
         if (input.fail())
             err::throw_with_trace("Invalid string: not enough bytes provided");
-        return BencodeItem{std::move(str)};
+        std::streampos end_pos{input.tellg() - static_cast<std::streampos>(1)};
+
+        return BencodeItem{
+            std::move(str), static_cast<size_t>(start_pos), static_cast<size_t>(end_pos)};
     }
     err::throw_with_trace("Invlaid string length.");
 }
 
 [[nodiscard]] BencodeItem parse_int(std::istream& input) {
+    std::streampos start_pos{input.tellg() - static_cast<std::streampos>(1)};
     std::string integer_str;
 
     std::getline(input, integer_str, 'e');
@@ -53,13 +58,16 @@ namespace {
 
     auto [p, ec] = std::from_chars(integer_str.data(), end, parsed_integer);
 
-    if (ec == std::errc() && p == end)
-        return BencodeItem(parsed_integer);
-    else
+    if (ec == std::errc() && p == end) {
+        std::streampos end_pos{input.tellg() - static_cast<std::streampos>(1)};
+        return BencodeItem(
+            parsed_integer, static_cast<size_t>(start_pos), static_cast<size_t>(end_pos));
+    } else
         err::throw_with_trace("Invalid integer.");
 }
 
 [[nodiscard]] BencodeItem parse_list(std::istream& input) {
+    std::streampos start_pos{input.tellg() - static_cast<std::streampos>(1)};
     BencodeList parsed_list{};
 
     int next_ch{'e'};
@@ -71,10 +79,13 @@ namespace {
     if (next_ch != 'e')
         err::throw_with_trace("Invalid list: no end provided");
 
-    return BencodeItem(std::move(parsed_list));
+    std::streampos end_pos{input.tellg() - static_cast<std::streampos>(1)};
+    return BencodeItem(
+        std::move(parsed_list), static_cast<size_t>(start_pos), static_cast<size_t>(end_pos));
 }
 
 [[nodiscard]] BencodeItem parse_dict(std::istream& input) {
+    std::streampos start_pos{input.tellg() - static_cast<std::streampos>(1)};
     BencodeDict parsed_dict{};
 
     int next_ch{'e'};
@@ -89,7 +100,9 @@ namespace {
     if (next_ch != 'e')
         err::throw_with_trace("Invalid dictionary: no end provided.");
 
-    return BencodeItem(std::move(parsed_dict));
+    std::streampos end_pos{input.tellg() - static_cast<std::streampos>(1)};
+    return BencodeItem(
+        std::move(parsed_dict), static_cast<size_t>(start_pos), static_cast<size_t>(end_pos));
 }
 
 [[nodiscard]] BencodeItem parse(std::istream& input) {

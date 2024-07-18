@@ -29,6 +29,12 @@ TEST_CASE("Bencode: BDecode: Integers", "[Bencode][BDecode]") {
         REQUIRE_THROWS(BDecode("i42e0"));
         REQUIRE_THROWS(BDecode("i42e0e"));
     }
+
+    SECTION("Offsets") {
+        BencodeItem item = BDecode("i42123e");
+        REQUIRE(item.start() == 0);
+        REQUIRE(item.end() == 6);
+    }
 }
 
 TEST_CASE("Bencode: BDecode: Strings", "[Bencode][BDecode]") {
@@ -50,6 +56,12 @@ TEST_CASE("Bencode: BDecode: Strings", "[Bencode][BDecode]") {
     SECTION("Invalid strings with trailing characters") {
         REQUIRE_THROWS(BDecode("3:foo4:bar0"));
         REQUIRE_THROWS(BDecode("3:foo4:bar0e"));
+    }
+
+    SECTION("Offsets") {
+        BencodeItem item = BDecode("3:foo");
+        REQUIRE(item.start() == 0);
+        REQUIRE(item.end() == 4);
     }
 }
 
@@ -81,6 +93,20 @@ TEST_CASE("Bencode: BDecode: Lists", "[Bencode][BDecode]") {
         REQUIRE_THROWS(BDecode("l3:foo3:bar0e0"));
         REQUIRE_THROWS(BDecode("l3:foo3:bar0e0e"));
     }
+
+    SECTION("Offsets") {
+        BencodeItem list_item = BDecode("l3:foo3:bare");
+        REQUIRE(list_item.start() == 0);
+        REQUIRE(list_item.end() == 11);
+
+        BencodeItem str_item = std::get<BencodeList>(list_item)[0];
+        REQUIRE(str_item.start() == 1);
+        REQUIRE(str_item.end() == 5);
+
+        str_item = std::get<BencodeList>(list_item)[1];
+        REQUIRE(str_item.start() == 6);
+        REQUIRE(str_item.end() == 10);
+    }
 }
 
 TEST_CASE("Bencode: BDecode: Dictionaries", "[Bencode][BDecode]") {
@@ -111,21 +137,79 @@ TEST_CASE("Bencode: BDecode: Dictionaries", "[Bencode][BDecode]") {
         REQUIRE_THROWS(BDecode("d3:foo3:bar3:baz3:qux0e0"));
         REQUIRE_THROWS(BDecode("d3:foo3:bar3:baz3:qux0e0e"));
     }
+
+    SECTION("Offsets") {
+        BencodeItem dict_item = BDecode("d3:foo3:bar3:bazi123ee");
+        REQUIRE(dict_item.start() == 0);
+        REQUIRE(dict_item.end() == 21);
+
+        BencodeItem str_item = std::get<BencodeDict>(dict_item)["foo"];
+        REQUIRE(str_item.start() == 6);
+        REQUIRE(str_item.end() == 10);
+
+        BencodeItem int_item = std::get<BencodeDict>(dict_item)["baz"];
+        REQUIRE(int_item.start() == 16);
+        REQUIRE(int_item.end() == 20);
+    }
 }
 
 TEST_CASE("Bencode: BDecode: Mixt", "[Bencode][BDecode]") {
     SECTION("List of dictionaries") {
-        auto list =
-            std::get<BencodeList>(BDecode("ld3:foo3:bar3:baz3:quxed3:foo3:bar3:bazi123eee"));
+        BencodeItem list_item = BDecode("ld3:foo3:bar3:baz3:quxed3:foo3:bar3:bazi123eee");
+        BencodeList list = std::get<BencodeList>(list_item);
         REQUIRE(list.size() == 2);
         REQUIRE(std::get<BencodeDict>(list[0]).size() == 2);
         REQUIRE(std::get<BencodeDict>(list[1]).size() == 2);
+
+        SECTION("Offsets") {
+            REQUIRE(list_item.start() == 0);
+            REQUIRE(list_item.end() == 45);
+
+            BencodeItem dict_item = std::get<BencodeList>(list_item)[0];
+            REQUIRE(dict_item.start() == 1);
+            REQUIRE(dict_item.end() == 22);
+
+            BencodeItem str_item = std::get<BencodeDict>(dict_item)["foo"];
+            REQUIRE(str_item.start() == 7);
+            REQUIRE(str_item.end() == 11);
+
+            BencodeItem int_item = std::get<BencodeDict>(dict_item)["baz"];
+            REQUIRE(int_item.start() == 17);
+            REQUIRE(int_item.end() == 21);
+        }
     }
 
     SECTION("Dictionary of lists") {
-        auto dict = std::get<BencodeDict>(BDecode("d3:fool3:foo3:bar3:baz3:quxe3:bazlee"));
+        BencodeItem dict_item = BDecode("d3:fool3:foo3:bar3:baz3:quxe3:bazlee");
+        BencodeDict dict = std::get<BencodeDict>(dict_item);
         REQUIRE(dict.size() == 2);
         REQUIRE(std::get<BencodeList>(dict["foo"]).size() == 4);
         REQUIRE(std::get<BencodeList>(dict["baz"]).size() == 0);
+
+        SECTION("Offsets") {
+            REQUIRE(dict_item.start() == 0);
+            REQUIRE(dict_item.end() == 35);
+
+            BencodeItem list_item = std::get<BencodeDict>(dict_item)["foo"];
+            REQUIRE(list_item.start() == 6);
+            REQUIRE(list_item.end() == 27);
+
+            BencodeItem str_item = std::get<BencodeList>(list_item)[0];
+            REQUIRE(str_item.start() == 7);
+            REQUIRE(str_item.end() == 11);
+
+            str_item = std::get<BencodeList>(list_item)[1];
+            REQUIRE(str_item.start() == 12);
+            REQUIRE(str_item.end() == 16);
+
+            str_item = std::get<BencodeList>(list_item)[2];
+            REQUIRE(str_item.start() == 17);
+            REQUIRE(str_item.end() == 21);
+
+            str_item = std::get<BencodeList>(list_item)[3];
+            REQUIRE(str_item.start() == 22);
+            REQUIRE(str_item.end() == 26);
+        }
     }
 }
+

@@ -1,19 +1,19 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "Bencode.hpp"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace Bencode;
 
 TEST_CASE("Bencode: BDecode: Integers", "[Bencode][BDecode]") {
     SECTION("Positive integers") {
         REQUIRE(std::get<BencodeInt>(BDecode("i42e")) == 42);
-        REQUIRE(std::get<BencodeInt>(BDecode("i1234567890e")) == 1234567890);
+        REQUIRE(std::get<BencodeInt>(BDecode("i1234567890e")) == 1'234'567'890);
         REQUIRE(std::get<BencodeInt>(BDecode("i0e")) == 0);
     }
 
     SECTION("Negative integers") {
         REQUIRE(std::get<BencodeInt>(BDecode("i-42e")) == -42);
-        REQUIRE(std::get<BencodeInt>(BDecode("i-1234567890e")) == -1234567890);
+        REQUIRE(std::get<BencodeInt>(BDecode("i-1234567890e")) == -1'234'567'890);
     }
 
     SECTION("Invalid integers") {
@@ -156,7 +156,7 @@ TEST_CASE("Bencode: BDecode: Dictionaries", "[Bencode][BDecode]") {
 TEST_CASE("Bencode: BDecode: Mixt", "[Bencode][BDecode]") {
     SECTION("List of dictionaries") {
         BencodeItem list_item = BDecode("ld3:foo3:bar3:baz3:quxed3:foo3:bar3:bazi123eee");
-        BencodeList list = std::get<BencodeList>(list_item);
+        BencodeList list      = std::get<BencodeList>(list_item);
         REQUIRE(list.size() == 2);
         REQUIRE(std::get<BencodeDict>(list[0]).size() == 2);
         REQUIRE(std::get<BencodeDict>(list[1]).size() == 2);
@@ -181,7 +181,7 @@ TEST_CASE("Bencode: BDecode: Mixt", "[Bencode][BDecode]") {
 
     SECTION("Dictionary of lists") {
         BencodeItem dict_item = BDecode("d3:fool3:foo3:bar3:baz3:quxe3:bazlee");
-        BencodeDict dict = std::get<BencodeDict>(dict_item);
+        BencodeDict dict      = std::get<BencodeDict>(dict_item);
         REQUIRE(dict.size() == 2);
         REQUIRE(std::get<BencodeList>(dict["foo"]).size() == 4);
         REQUIRE(std::get<BencodeList>(dict["baz"]).size() == 0);
@@ -212,4 +212,3 @@ TEST_CASE("Bencode: BDecode: Mixt", "[Bencode][BDecode]") {
         }
     }
 }
-

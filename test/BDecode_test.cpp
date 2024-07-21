@@ -33,7 +33,7 @@ TEST_CASE("Bencode: BDecode: Integers", "[Bencode][BDecode]") {
     SECTION("Offsets") {
         BencodeItem item = BDecode("i42123e");
         REQUIRE(item.start() == 0);
-        REQUIRE(item.end() == 6);
+        REQUIRE(item.len() == 7);
     }
 }
 
@@ -61,7 +61,7 @@ TEST_CASE("Bencode: BDecode: Strings", "[Bencode][BDecode]") {
     SECTION("Offsets") {
         BencodeItem item = BDecode("3:foo");
         REQUIRE(item.start() == 0);
-        REQUIRE(item.end() == 4);
+        REQUIRE(item.len() == 5);
     }
 }
 
@@ -97,15 +97,15 @@ TEST_CASE("Bencode: BDecode: Lists", "[Bencode][BDecode]") {
     SECTION("Offsets") {
         BencodeItem list_item = BDecode("l3:foo3:bare");
         REQUIRE(list_item.start() == 0);
-        REQUIRE(list_item.end() == 11);
+        REQUIRE(list_item.len() == 12);
 
         BencodeItem str_item = std::get<BencodeList>(list_item)[0];
         REQUIRE(str_item.start() == 1);
-        REQUIRE(str_item.end() == 5);
+        REQUIRE(str_item.len() == 5);
 
         str_item = std::get<BencodeList>(list_item)[1];
         REQUIRE(str_item.start() == 6);
-        REQUIRE(str_item.end() == 10);
+        REQUIRE(str_item.len() == 5);
     }
 }
 
@@ -141,15 +141,15 @@ TEST_CASE("Bencode: BDecode: Dictionaries", "[Bencode][BDecode]") {
     SECTION("Offsets") {
         BencodeItem dict_item = BDecode("d3:foo3:bar3:bazi123ee");
         REQUIRE(dict_item.start() == 0);
-        REQUIRE(dict_item.end() == 21);
+        REQUIRE(dict_item.len() == 22);
 
         BencodeItem str_item = std::get<BencodeDict>(dict_item)["foo"];
         REQUIRE(str_item.start() == 6);
-        REQUIRE(str_item.end() == 10);
+        REQUIRE(str_item.len() == 5);
 
         BencodeItem int_item = std::get<BencodeDict>(dict_item)["baz"];
         REQUIRE(int_item.start() == 16);
-        REQUIRE(int_item.end() == 20);
+        REQUIRE(int_item.len() == 5);
     }
 }
 
@@ -163,19 +163,19 @@ TEST_CASE("Bencode: BDecode: Mixt", "[Bencode][BDecode]") {
 
         SECTION("Offsets") {
             REQUIRE(list_item.start() == 0);
-            REQUIRE(list_item.end() == 45);
+            REQUIRE(list_item.len() == 46);
 
             BencodeItem dict_item = std::get<BencodeList>(list_item)[0];
             REQUIRE(dict_item.start() == 1);
-            REQUIRE(dict_item.end() == 22);
+            REQUIRE(dict_item.len() == 22);
 
             BencodeItem str_item = std::get<BencodeDict>(dict_item)["foo"];
             REQUIRE(str_item.start() == 7);
-            REQUIRE(str_item.end() == 11);
+            REQUIRE(str_item.len() == 5);
 
             BencodeItem int_item = std::get<BencodeDict>(dict_item)["baz"];
             REQUIRE(int_item.start() == 17);
-            REQUIRE(int_item.end() == 21);
+            REQUIRE(int_item.len() == 5);
         }
     }
 
@@ -188,27 +188,27 @@ TEST_CASE("Bencode: BDecode: Mixt", "[Bencode][BDecode]") {
 
         SECTION("Offsets") {
             REQUIRE(dict_item.start() == 0);
-            REQUIRE(dict_item.end() == 35);
+            REQUIRE(dict_item.len() == 36);
 
             BencodeItem list_item = std::get<BencodeDict>(dict_item)["foo"];
             REQUIRE(list_item.start() == 6);
-            REQUIRE(list_item.end() == 27);
+            REQUIRE(list_item.len() == 22);
 
             BencodeItem str_item = std::get<BencodeList>(list_item)[0];
             REQUIRE(str_item.start() == 7);
-            REQUIRE(str_item.end() == 11);
+            REQUIRE(str_item.len() == 5);
 
             str_item = std::get<BencodeList>(list_item)[1];
             REQUIRE(str_item.start() == 12);
-            REQUIRE(str_item.end() == 16);
+            REQUIRE(str_item.len() == 5);
 
             str_item = std::get<BencodeList>(list_item)[2];
             REQUIRE(str_item.start() == 17);
-            REQUIRE(str_item.end() == 21);
+            REQUIRE(str_item.len() == 5);
 
             str_item = std::get<BencodeList>(list_item)[3];
             REQUIRE(str_item.start() == 22);
-            REQUIRE(str_item.end() == 26);
+            REQUIRE(str_item.len() == 5);
         }
     }
 }

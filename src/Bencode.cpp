@@ -36,10 +36,10 @@ namespace {
             input.read(str.data(), length);
             if (input.fail())
                 err::throw_with_trace("Invalid string: not enough bytes provided");
-            std::streampos end_pos{input.tellg() - static_cast<std::streampos>(1)};
+            std::streampos elem_len{input.tellg() - start_pos};
 
             return BencodeItem{
-                std::move(str), static_cast<size_t>(start_pos), static_cast<size_t>(end_pos)
+                std::move(str), static_cast<size_t>(start_pos), static_cast<size_t>(elem_len)
             };
         }
         err::throw_with_trace("Invlaid string length.");
@@ -61,9 +61,9 @@ namespace {
         auto [p, ec] = std::from_chars(integer_str.data(), end, parsed_integer);
 
         if (ec == std::errc() && p == end) {
-            std::streampos end_pos{input.tellg() - static_cast<std::streampos>(1)};
+            std::streampos elem_len{input.tellg() - start_pos};
             return BencodeItem(
-                parsed_integer, static_cast<size_t>(start_pos), static_cast<size_t>(end_pos)
+                parsed_integer, static_cast<size_t>(start_pos), static_cast<size_t>(elem_len)
             );
         } else
             err::throw_with_trace("Invalid integer.");
@@ -82,9 +82,9 @@ namespace {
         if (next_ch != 'e')
             err::throw_with_trace("Invalid list: no end provided");
 
-        std::streampos end_pos{input.tellg() - static_cast<std::streampos>(1)};
+        std::streampos elem_len{input.tellg() - start_pos};
         return BencodeItem(
-            std::move(parsed_list), static_cast<size_t>(start_pos), static_cast<size_t>(end_pos)
+            std::move(parsed_list), static_cast<size_t>(start_pos), static_cast<size_t>(elem_len)
         );
     }
 
@@ -104,9 +104,9 @@ namespace {
         if (next_ch != 'e')
             err::throw_with_trace("Invalid dictionary: no end provided.");
 
-        std::streampos end_pos{input.tellg() - static_cast<std::streampos>(1)};
+        std::streampos elem_len{input.tellg() - start_pos};
         return BencodeItem(
-            std::move(parsed_dict), static_cast<size_t>(start_pos), static_cast<size_t>(end_pos)
+            std::move(parsed_dict), static_cast<size_t>(start_pos), static_cast<size_t>(elem_len)
         );
     }
 

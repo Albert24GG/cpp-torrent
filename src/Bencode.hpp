@@ -19,12 +19,12 @@ static constexpr BencodeInt MAX_STRING_LEN{1 << 27};  // 128 MiB
 class BencodeItem : public std::variant<BencodeInt, BencodeString, BencodeList, BencodeDict> {
     public:
         template <typename T>
-        BencodeItem(T&& variant_val, size_t start_off, size_t end_off)
+        explicit BencodeItem(T&& variant_val, size_t start_off = 0, size_t elem_len = 0)
             : variant<BencodeInt, BencodeString, BencodeList, BencodeDict>(
                   std::forward<T>(variant_val)
               ),
               start_off(start_off),
-              end_off(end_off) {}
+              elem_len(elem_len) {}
 
         BencodeItem()                                   = default;
         BencodeItem(const BencodeItem& item)            = default;
@@ -34,12 +34,12 @@ class BencodeItem : public std::variant<BencodeInt, BencodeString, BencodeList, 
         ~BencodeItem()                                  = default;
 
         [[nodiscard]] size_t start() const { return start_off; }
-        [[nodiscard]] size_t end() const { return end_off; }
+        [[nodiscard]] size_t len() const { return elem_len; }
 
     private:
-        // offsets that disclose the location of the item in the stream
+        // start offset and length of the bencoded item in the input stream
         size_t start_off{};
-        size_t end_off{};
+        size_t elem_len{};
 };
 
 /*

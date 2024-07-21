@@ -24,6 +24,10 @@ class Sha1 {
             return Sha1(std::span<const uint8_t, SHA1_SIZE>(data, SHA1_SIZE));
         }
 
+        [[nodiscard]] static Sha1 from_raw_data(std::span<const uint8_t, SHA1_SIZE> data) {
+            return Sha1(data);
+        }
+
         [[nodiscard]] static Sha1 digest(std::span<const uint8_t> data);
 
         [[nodiscard]] static Sha1 digest(const uint8_t* data, size_t count);

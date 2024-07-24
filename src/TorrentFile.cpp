@@ -16,7 +16,7 @@
 
 namespace {
 
-inline void check_field_existance(const Bencode::BencodeDict& dict, const std::string field) {
+inline void check_field_existance(const Bencode::BencodeDict& dict, const std::string& field) {
     if (!dict.contains(field))
         err::throw_with_trace(std::format("Invalid torrent file: No \"{}\" field provided.", field)
         );

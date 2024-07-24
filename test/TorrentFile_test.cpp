@@ -1,5 +1,5 @@
 #include "Crypto.hpp"
-#include "TorrentFile.hpp"
+#include "TorrentMetadata.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
@@ -12,7 +12,7 @@ TEST_CASE("TorrentFile: parse_torrent_file", "[TorrentFile]") {
         std::string torrent_file =
             R"(d8:announce41:http://bttracker.debian.org:6969/announce7:comment35:"Debian CD from cdimage.debian.org"10:created by13:mktorrent 1.113:creation datei1719662085e4:infod6:lengthi661651456e4:name31:debian-12.6.0-amd64-netinst.iso12:piece lengthi262144e6:pieces0:e8:url-listl94:https://cdimage.debian.org/cdimage/release/12.6.0/amd64/iso-cd/debian-12.6.0-amd64-netinst.iso94:https://cdimage.debian.org/cdimage/archive/12.6.0/amd64/iso-cd/debian-12.6.0-amd64-netinst.isoee)";
 
-        TorrentFile torrent = parse_torrent_file(torrent_file);
+        TorrentMetadata torrent = parse_torrent_file(torrent_file);
 
         std::filesystem::path cur_path{std::filesystem::current_path()};
         REQUIRE(torrent.announce == "http://bttracker.debian.org:6969/announce");
@@ -35,7 +35,7 @@ TEST_CASE("TorrentFile: parse_torrent_file", "[TorrentFile]") {
         std::string torrent_file =
             R"(d8:announce41:http://bttracker.debian.org:6969/announce7:comment35:"Debian CD from cdimage.debian.org"10:created by13:mktorrent 1.113:creation datei1719662085e4:infod5:filesld6:lengthi661651456e4:pathl7:iso_dir31:debian-12.6.0-amd64-netinst.isoeed6:lengthi1234e4:pathl5:file1eed6:lengthi1024e4:pathl4:dir14:dir24:dir35:file2eee4:name8:main_dir12:piece lengthi262144e6:pieces0:e8:url-listl94:https://cdimage.debian.org/cdimage/release/12.6.0/amd64/iso-cd/debian-12.6.0-amd64-netinst.iso94:https://cdimage.debian.org/cdimage/archive/12.6.0/amd64/iso-cd/debian-12.6.0-amd64-netinst.isoee)";
 
-        TorrentFile torrent = parse_torrent_file(torrent_file);
+        TorrentMetadata torrent = parse_torrent_file(torrent_file);
 
         std::filesystem::path cur_path{std::filesystem::current_path()};
         REQUIRE(torrent.announce == "http://bttracker.debian.org:6969/announce");

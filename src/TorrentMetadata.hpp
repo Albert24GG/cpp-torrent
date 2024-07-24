@@ -9,7 +9,7 @@
 
 namespace torrent::md {
 
-struct TorrentFile {
+struct TorrentMetadata {
         std::string           announce;
         std::string           piece_hashes;
         size_t                piece_length;
@@ -17,8 +17,8 @@ struct TorrentFile {
         crypto::Sha1          info_hash;
 };
 
-TorrentFile parse_torrent_file(std::istream& torrent_istream);
-TorrentFile parse_torrent_file(const std::filesystem::path& torrent_path);
-TorrentFile parse_torrent_file(const std::string& torrent_str);
+TorrentMetadata parse_torrent_file(std::istream& torrent_istream);
+TorrentMetadata parse_torrent_file(const std::filesystem::path& torrent_path);
+TorrentMetadata parse_torrent_file(const std::string& torrent_str);
 
 }  // namespace torrent::md

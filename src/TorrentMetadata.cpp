@@ -1,4 +1,4 @@
-#include "TorrentFile.hpp"
+#include "TorrentMetadata.hpp"
 
 #include "Bencode.hpp"
 #include "Error.hpp"
@@ -117,7 +117,7 @@ torrent::crypto::Sha1 get_info_hash(
 
 namespace torrent::md {
 
-TorrentFile parse_torrent_file(std::istream& torrent_istream) {
+TorrentMetadata parse_torrent_file(std::istream& torrent_istream) {
     Bencode::BencodeItem torrent = Bencode::BDecode(torrent_istream);
 
     if (!std::holds_alternative<Bencode::BencodeDict>(torrent))
@@ -145,7 +145,7 @@ TorrentFile parse_torrent_file(std::istream& torrent_istream) {
     };
 }
 
-TorrentFile parse_torrent_file(const std::filesystem::path& torrent_path) {
+TorrentMetadata parse_torrent_file(const std::filesystem::path& torrent_path) {
     if (!std::filesystem::exists(torrent_path))
         err::throw_with_trace("Path to torrent file provided does not exist.");
 
@@ -158,7 +158,7 @@ TorrentFile parse_torrent_file(const std::filesystem::path& torrent_path) {
     return parse_torrent_file(torrent_istream);
 }
 
-TorrentFile parse_torrent_file(const std::string& torrent_str) {
+TorrentMetadata parse_torrent_file(const std::string& torrent_str) {
     std::istringstream torrent_istream{torrent_str};
     return parse_torrent_file(torrent_istream);
 }

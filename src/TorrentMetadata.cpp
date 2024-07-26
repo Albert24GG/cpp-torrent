@@ -106,11 +106,11 @@ torrent::crypto::Sha1 get_info_hash(
     size_t length{torrent_info.len()};
 
     torrent_istream.seekg(start_off, std::ios_base::beg);
-    std::string buffer(length, '\0');
+    std::vector<uint8_t> buffer(length);
 
-    torrent_istream.read(buffer.data(), length);
+    torrent_istream.read(reinterpret_cast<char*>(buffer.data()), length);
 
-    return torrent::crypto::Sha1::digest(reinterpret_cast<uint8_t*>(buffer.data()), length);
+    return torrent::crypto::Sha1::digest(buffer.data(), length);
 }
 
 }  // namespace

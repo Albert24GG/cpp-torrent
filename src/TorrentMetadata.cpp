@@ -57,8 +57,6 @@ Torrent_Info_File_Entry parse_file_entry(Bencode::BencodeDict& file_entry) {
 }
 
 Torrent_Info_Content parse_info(Bencode::BencodeDict& torrent_info) {
-    std::filesystem::path dest_dir{std::filesystem::current_path()};
-
     check_field<Bencode::BencodeString>(torrent_info, "name");
     check_field<Bencode::BencodeInt>(torrent_info, "piece length");
     check_field<Bencode::BencodeString>(torrent_info, "pieces");
@@ -72,13 +70,13 @@ Torrent_Info_Content parse_info(Bencode::BencodeDict& torrent_info) {
         check_field_type<Bencode::BencodeInt>(torrent_info["length"], "length");
 
         auto& file_length = std::get<Bencode::BencodeInt>(torrent_info["length"]);
-        auto  file_path =
-            dest_dir / std::move(std::get<Bencode::BencodeString>(torrent_info["name"]));
+        auto& file_path   = std::get<Bencode::BencodeString>(torrent_info["name"]);
 
         files.emplace_back(std::move(file_path), 0, file_length);
     } else {  // multiple files
         check_field<Bencode::BencodeList>(torrent_info, "files");
-        dest_dir = dest_dir / std::move(std::get<Bencode::BencodeString>(torrent_info["name"]));
+        auto dest_dir =
+            std::filesystem::path(std::get<Bencode::BencodeString>(torrent_info["name"]));
         auto&  file_list = std::get<Bencode::BencodeList>(torrent_info["files"]);
         size_t cur_offset{0};
 

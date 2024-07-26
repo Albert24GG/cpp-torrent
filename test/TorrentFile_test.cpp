@@ -14,12 +14,11 @@ TEST_CASE("TorrentFile: parse_torrent_file", "[TorrentFile]") {
 
         TorrentMetadata torrent = parse_torrent_file(torrent_file);
 
-        std::filesystem::path cur_path{std::filesystem::current_path()};
         REQUIRE(torrent.announce == "http://bttracker.debian.org:6969/announce");
         REQUIRE(torrent.piece_hashes == "");
         REQUIRE(torrent.piece_length == 262'144);
         REQUIRE(torrent.files.size() == 1);
-        REQUIRE(torrent.files[0].get_path() == cur_path / "debian-12.6.0-amd64-netinst.iso");
+        REQUIRE(torrent.files[0].get_path() == "debian-12.6.0-amd64-netinst.iso");
         REQUIRE(torrent.files[0].get_length() == 661'651'456);
         REQUIRE(torrent.files[0].get_start_off() == 0);
 
@@ -37,7 +36,6 @@ TEST_CASE("TorrentFile: parse_torrent_file", "[TorrentFile]") {
 
         TorrentMetadata torrent = parse_torrent_file(torrent_file);
 
-        std::filesystem::path cur_path{std::filesystem::current_path()};
         REQUIRE(torrent.announce == "http://bttracker.debian.org:6969/announce");
         REQUIRE(torrent.piece_hashes == "");
         REQUIRE(torrent.piece_length == 262'144);
@@ -45,18 +43,18 @@ TEST_CASE("TorrentFile: parse_torrent_file", "[TorrentFile]") {
 
         REQUIRE(
             torrent.files[0].get_path() ==
-            cur_path / "main_dir" / "iso_dir" / "debian-12.6.0-amd64-netinst.iso"
+            std::filesystem::path("main_dir") / "iso_dir" / "debian-12.6.0-amd64-netinst.iso"
         );
         REQUIRE(torrent.files[0].get_length() == 661'651'456);
         REQUIRE(torrent.files[0].get_start_off() == 0);
 
-        REQUIRE(torrent.files[1].get_path() == cur_path / "main_dir" / "file1");
+        REQUIRE(torrent.files[1].get_path() == std::filesystem::path("main_dir") / "file1");
         REQUIRE(torrent.files[1].get_length() == 1'234);
         REQUIRE(torrent.files[1].get_start_off() == 661'651'456);
 
         REQUIRE(
             torrent.files[2].get_path() ==
-            cur_path / "main_dir" / "dir1" / "dir2" / "dir3" / "file2"
+            std::filesystem::path("main_dir") / "dir1" / "dir2" / "dir3" / "file2"
         );
         REQUIRE(torrent.files[2].get_length() == 1'024);
         REQUIRE(torrent.files[2].get_start_off() == 661'652'690);

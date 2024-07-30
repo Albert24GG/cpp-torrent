@@ -13,6 +13,10 @@ struct PeerInfo {
         bool operator<(const PeerInfo& other) const {
             return std::tie(ip, port) < std::tie(other.ip, other.port);
         }
+
+        bool operator==(const PeerInfo& other) const {
+            return std::tie(ip, port) == std::tie(other.ip, other.port);
+        }
 };
 
 }  // namespace torrent

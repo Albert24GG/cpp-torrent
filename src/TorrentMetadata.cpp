@@ -36,7 +36,7 @@ inline void check_field(const Bencode::BencodeDict& dict, const std::string& fie
     check_field_type<RequiredType>(dict.at(field), field);
 }
 
-using Torrent_Info_Content = std::tuple<size_t, std::vector<torrent::fs::File>, std::string>;
+using Torrent_Info_Content = std::tuple<size_t, std::vector<torrent::md::FileInfo>, std::string>;
 
 using Torrent_Info_File_Entry = std::pair<size_t, std::filesystem::path>;
 
@@ -64,7 +64,7 @@ Torrent_Info_Content parse_info(Bencode::BencodeDict& torrent_info) {
     if (!torrent_info.contains("length") && !torrent_info.contains("files"))
         err::throw_with_trace(R"(Invalid torrent file: No "length" or "files" field provided.)");
 
-    std::vector<torrent::fs::File> files;
+    std::vector<torrent::md::FileInfo> files;
 
     if (torrent_info.contains("length")) {  // single file
         check_field_type<Bencode::BencodeInt>(torrent_info["length"], "length");

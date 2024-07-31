@@ -18,9 +18,9 @@ TEST_CASE("TorrentFile: parse_torrent_file", "[TorrentFile]") {
         REQUIRE(torrent.piece_hashes == "");
         REQUIRE(torrent.piece_length == 262'144);
         REQUIRE(torrent.files.size() == 1);
-        REQUIRE(torrent.files[0].get_path() == "debian-12.6.0-amd64-netinst.iso");
-        REQUIRE(torrent.files[0].get_length() == 661'651'456);
-        REQUIRE(torrent.files[0].get_start_off() == 0);
+        REQUIRE(torrent.files[0].path == "debian-12.6.0-amd64-netinst.iso");
+        REQUIRE(torrent.files[0].length == 661'651'456);
+        REQUIRE(torrent.files[0].start_off == 0);
 
         std::array<uint8_t, 20> info_hash_arr{{0xa4, 0x04, 0x0d, 0xa2, 0x37, 0xa2, 0xf9,
                                                0x51, 0x3c, 0x4a, 0x61, 0xf7, 0x92, 0xfb,
@@ -42,22 +42,22 @@ TEST_CASE("TorrentFile: parse_torrent_file", "[TorrentFile]") {
         REQUIRE(torrent.files.size() == 3);
 
         REQUIRE(
-            torrent.files[0].get_path() ==
+            torrent.files[0].path ==
             std::filesystem::path("main_dir") / "iso_dir" / "debian-12.6.0-amd64-netinst.iso"
         );
-        REQUIRE(torrent.files[0].get_length() == 661'651'456);
-        REQUIRE(torrent.files[0].get_start_off() == 0);
+        REQUIRE(torrent.files[0].length == 661'651'456);
+        REQUIRE(torrent.files[0].start_off == 0);
 
-        REQUIRE(torrent.files[1].get_path() == std::filesystem::path("main_dir") / "file1");
-        REQUIRE(torrent.files[1].get_length() == 1'234);
-        REQUIRE(torrent.files[1].get_start_off() == 661'651'456);
+        REQUIRE(torrent.files[1].path == std::filesystem::path("main_dir") / "file1");
+        REQUIRE(torrent.files[1].length == 1'234);
+        REQUIRE(torrent.files[1].start_off == 661'651'456);
 
         REQUIRE(
-            torrent.files[2].get_path() ==
+            torrent.files[2].path ==
             std::filesystem::path("main_dir") / "dir1" / "dir2" / "dir3" / "file2"
         );
-        REQUIRE(torrent.files[2].get_length() == 1'024);
-        REQUIRE(torrent.files[2].get_start_off() == 661'652'690);
+        REQUIRE(torrent.files[2].length == 1'024);
+        REQUIRE(torrent.files[2].start_off == 661'652'690);
 
         std::array<uint8_t, 20> info_hash_arr{{0x5e, 0x60, 0xf1, 0xdc, 0xeb, 0xa3, 0xfa,
                                                0xde, 0x17, 0x28, 0xf1, 0x78, 0x1f, 0xab,

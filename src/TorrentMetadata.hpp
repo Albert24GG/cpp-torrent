@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Crypto.hpp"
-#include "File.hpp"
 
 #include <filesystem>
 #include <string>
@@ -9,11 +8,17 @@
 
 namespace torrent::md {
 
+struct FileInfo {
+        std::filesystem::path path;
+        size_t                start_off{};
+        size_t                length{};
+};
+
 struct TorrentMetadata {
         std::string           announce;
         std::string           piece_hashes;
         size_t                piece_length;
-        std::vector<fs::File> files;
+        std::vector<FileInfo> files;
         crypto::Sha1          info_hash;
 };
 

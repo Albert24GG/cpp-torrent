@@ -143,19 +143,6 @@ TorrentMetadata parse_torrent_file(std::istream& torrent_istream) {
     };
 }
 
-TorrentMetadata parse_torrent_file(const std::filesystem::path& torrent_path) {
-    if (!std::filesystem::exists(torrent_path))
-        err::throw_with_trace("Path to torrent file provided does not exist.");
-
-    std::ifstream torrent_istream(torrent_path.c_str());
-
-    if (!torrent_istream)
-        err::throw_with_trace(std::format("Failed to open torrent file: {}", torrent_path.string())
-        );
-
-    return parse_torrent_file(torrent_istream);
-}
-
 TorrentMetadata parse_torrent_file(const std::string& torrent_str) {
     std::istringstream torrent_istream{torrent_str};
     return parse_torrent_file(torrent_istream);

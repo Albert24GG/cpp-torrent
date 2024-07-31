@@ -18,7 +18,6 @@ struct TorrentMetadata {
 };
 
 TorrentMetadata parse_torrent_file(std::istream& torrent_istream);
-TorrentMetadata parse_torrent_file(const std::filesystem::path& torrent_path);
 TorrentMetadata parse_torrent_file(const std::string& torrent_str);
 
 }  // namespace torrent::md

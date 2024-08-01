@@ -19,7 +19,7 @@ void FileManager::write(std::span<const char> data, size_t offset) {
     size_t file_index{0};
 
     // find the first file that contains the offset
-    while (offset < files[file_index].first) {
+    while (offset > files[file_index].first + files[file_index].second.get_length()) {
         ++file_index;
     }
 

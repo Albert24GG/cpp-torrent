@@ -22,9 +22,10 @@ TEST_CASE("TorrentFile: parse_torrent_file", "[TorrentFile]") {
         REQUIRE(torrent.files[0].length == 661'651'456);
         REQUIRE(torrent.files[0].start_off == 0);
 
-        std::array<uint8_t, 20> info_hash_arr{{0xa4, 0x04, 0x0d, 0xa2, 0x37, 0xa2, 0xf9,
-                                               0x51, 0x3c, 0x4a, 0x61, 0xf7, 0x92, 0xfb,
-                                               0x62, 0xa0, 0x5a, 0xc9, 0xd4, 0x36}};
+        static constexpr std::array<uint8_t, 20> info_hash_arr{
+            {0xa4, 0x04, 0x0d, 0xa2, 0x37, 0xa2, 0xf9, 0x51, 0x3c, 0x4a,
+             0x61, 0xf7, 0x92, 0xfb, 0x62, 0xa0, 0x5a, 0xc9, 0xd4, 0x36}
+        };
 
         Sha1 info_hash{Sha1::from_raw_data(info_hash_arr)};
         REQUIRE(torrent.info_hash == info_hash);
@@ -59,9 +60,10 @@ TEST_CASE("TorrentFile: parse_torrent_file", "[TorrentFile]") {
         REQUIRE(torrent.files[2].length == 1'024);
         REQUIRE(torrent.files[2].start_off == 661'652'690);
 
-        std::array<uint8_t, 20> info_hash_arr{{0x5e, 0x60, 0xf1, 0xdc, 0xeb, 0xa3, 0xfa,
-                                               0xde, 0x17, 0x28, 0xf1, 0x78, 0x1f, 0xab,
-                                               0x33, 0x58, 0x89, 0x16, 0x72, 0x3b}};
+        static constexpr std::array<uint8_t, 20> info_hash_arr{
+            {0x5e, 0x60, 0xf1, 0xdc, 0xeb, 0xa3, 0xfa, 0xde, 0x17, 0x28,
+             0xf1, 0x78, 0x1f, 0xab, 0x33, 0x58, 0x89, 0x16, 0x72, 0x3b}
+        };
 
         Sha1 info_hash{Sha1::from_raw_data(info_hash_arr)};
         REQUIRE(torrent.info_hash == info_hash);

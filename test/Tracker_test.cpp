@@ -9,7 +9,7 @@
 #include <thread>
 
 TEST_CASE("Tracker: retrieve_peers", "[Tracker]") {
-    std::array<torrent::PeerInfo, 5> peers{
+    static constexpr std::array<torrent::PeerInfo, 5> peers{
         {{"192.168.0.1", 6'881},
          {"192.168.0.2", 6'882},
          {"192.168.0.3", 6'883},

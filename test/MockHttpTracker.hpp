@@ -11,7 +11,9 @@
 class MockHttpTracker {
     public:
         MockHttpTracker(
-            std::span<torrent::PeerInfo> peers, torrent::crypto::Sha1 info_hash, uint64_t interval
+            std::span<const torrent::PeerInfo> peers,
+            torrent::crypto::Sha1              info_hash,
+            uint64_t                           interval
         );
 
         MockHttpTracker(const MockHttpTracker&)            = delete;

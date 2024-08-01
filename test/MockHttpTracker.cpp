@@ -14,7 +14,7 @@
 
 namespace {
 
-std::string get_compact_peer_list(std::span<torrent::PeerInfo>& peers) {
+std::string get_compact_peer_list(std::span<const torrent::PeerInfo>& peers) {
     std::string peer_list;
     peer_list.reserve(6 * peers.size());
 
@@ -50,7 +50,7 @@ std::string get_compact_peer_list(std::span<torrent::PeerInfo>& peers) {
     return peer_list;
 }
 
-std::string build_response(std::span<torrent::PeerInfo>& peers, uint64_t interval) {
+std::string build_response(std::span<const torrent::PeerInfo>& peers, uint64_t interval) {
     std::string compact_peer_list{get_compact_peer_list(peers)};
     return std::format(
         "d8:intervali{}e5:peers{}:{}e", interval, compact_peer_list.size(), compact_peer_list
@@ -60,7 +60,7 @@ std::string build_response(std::span<torrent::PeerInfo>& peers, uint64_t interva
 }  // namespace
 
 MockHttpTracker::MockHttpTracker(
-    std::span<torrent::PeerInfo> peers, torrent::crypto::Sha1 info_hash, uint64_t interval
+    std::span<const torrent::PeerInfo> peers, torrent::crypto::Sha1 info_hash, uint64_t interval
 ) {
     server.Get(
         "/announce",

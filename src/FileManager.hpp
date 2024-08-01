@@ -18,8 +18,8 @@ class FileManager {
 
         FileManager(const FileManager&)            = delete;
         FileManager& operator=(const FileManager&) = delete;
-        FileManager(FileManager&&)                 = delete;
-        FileManager& operator=(FileManager&&)      = delete;
+        FileManager(FileManager&&)                 = default;
+        FileManager& operator=(FileManager&&)      = default;
         ~FileManager()                             = default;
 
         void write(std::span<const char> data, size_t offset);

@@ -86,7 +86,7 @@ class PieceManager {
                 }
 
             private:
-                const std::vector<uint16_t>& availability;
+                std::span<const uint16_t> availability;
         };
 
         // Set of indices of pieces sorted by availability

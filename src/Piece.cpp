@@ -35,7 +35,7 @@ auto Piece::request_next_block() -> std::optional<std::pair<size_t, size_t>> {
         if (block_received[i] || !is_block_timed_out(i)) {
             continue;
         }
-        block_request_time.emplace(i, std::chrono::steady_clock::now());
+        block_request_time.insert_or_assign(i, std::chrono::steady_clock::now());
         size_t offset{i * BLOCK_SIZE};
         size_t block_size{i == blocks_cnt - 1 ? piece_size % BLOCK_SIZE : BLOCK_SIZE};
 

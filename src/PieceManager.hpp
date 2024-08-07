@@ -59,8 +59,8 @@ class PieceManager {
         void update_pieces_availability(std::span<const std::byte> bitfield, char sign);
 
         static uint8_t get_bit(std::span<const std::byte> bitfield, size_t piece_index) {
-            return static_cast<uint8_t>(bitfield[piece_index >> 3]) &
-                   (1U << (7 - (piece_index & 7)));
+            return (static_cast<uint8_t>(bitfield[piece_index >> 3]) >> (7 - (piece_index & 7))) &
+                   1U;
         }
 
         size_t                                    max_active_requests;

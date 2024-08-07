@@ -49,7 +49,9 @@ class PieceManager {
         void remove_peer_bitfield(std::span<const std::byte> bitfield) {
             update_pieces_availability(bitfield, -1);
         }
-        void add_available_piece(size_t piece_index) { ++piece_avail[piece_index]; }
+        void add_available_piece(size_t piece_index) {
+            update_piece_availability(piece_index, piece_avail[piece_index] + 1);
+        }
 
         void receive_block(size_t piece_index, std::span<const std::byte> block, size_t offset);
         auto request_next_block(std::span<const std::byte> bitfield
@@ -57,6 +59,17 @@ class PieceManager {
 
     private:
         void update_pieces_availability(std::span<const std::byte> bitfield, char sign);
+
+        /**
+         * Update the availability of a piece
+         * @param piece_index Index of the piece
+         * @param availability New availability of the piece
+         */
+        void update_piece_availability(size_t piece_index, uint16_t availability) {
+            sorted_pieces.erase(piece_index);
+            piece_avail[piece_index] = availability;
+            sorted_pieces.insert(piece_index);
+        }
 
         static uint8_t get_bit(std::span<const std::byte> bitfield, size_t piece_index) {
             return (static_cast<uint8_t>(bitfield[piece_index >> 3]) >> (7 - (piece_index & 7))) &
@@ -82,6 +95,9 @@ class PieceManager {
                     : availability{piece_avail} {}
 
                 bool operator()(uint32_t i, uint32_t j) const {
+                    if (availability[i] == availability[j]) {
+                        return i < j;
+                    }
                     return availability[i] < availability[j];
                 }
 

@@ -13,9 +13,9 @@ void PieceManager::update_pieces_availability(std::span<const std::byte> bitfiel
         // Get the bit that represents the availability of the piece
         uint8_t avail{get_bit(bitfield, piece_idx)};
 
-        piece_avail[piece_idx] += sign * avail;
         if (avail != 0U) {
-            sorted_pieces.insert(piece_idx);
+            uint16_t new_avail{static_cast<uint16_t>(piece_avail[piece_idx] + sign * avail)};
+            update_piece_availability(piece_idx, new_avail);
         }
     }
 }

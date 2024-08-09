@@ -12,14 +12,19 @@
 namespace torrent {
 
 static constexpr size_t BLOCK_SIZE{1ULL << 14U};
-static constexpr auto   BLOCK_REQUEST_TIMEOUT{std::chrono::seconds{10}};
 
+using namespace std::literals::chrono_literals;
 class Piece {
     public:
-        Piece(size_t size, torrent::utils::PieceAllocator& allocator)
+        Piece(
+            size_t                          size,
+            torrent::utils::PieceAllocator& allocator,
+            std::chrono::milliseconds       request_timeout = 10s
+        )
             : piece_size{size},
               blocks_cnt{1 + (size - 1) / BLOCK_SIZE},
               blocks_left{blocks_cnt},
+              block_request_timeout{request_timeout},
               piece_data(size, allocator),
               block_received(blocks_cnt, false) {}
 
@@ -56,13 +61,14 @@ class Piece {
         bool is_block_timed_out(size_t block_index) const {
             auto request_time = get_block_request_time(block_index);
             return !request_time.has_value() ||
-                   (std::chrono::steady_clock::now() - request_time.value() >= BLOCK_REQUEST_TIMEOUT
+                   (std::chrono::steady_clock::now() - request_time.value() >= block_request_timeout
                    );
         }
 
         size_t                                                 piece_size;
         size_t                                                 blocks_cnt;
         size_t                                                 blocks_left;
+        std::chrono::milliseconds                              block_request_timeout;
         std::vector<std::byte, torrent::utils::PieceAllocator> piece_data;
 
         // bitset to keep track of which blocks have been received

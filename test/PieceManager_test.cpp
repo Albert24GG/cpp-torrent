@@ -51,8 +51,10 @@ TEST_CASE("PieceManager: Single Piece", "[PieceManager]") {
         crypto::Sha1::digest(reinterpret_cast<uint8_t*>(piece_data.data()), piece_data.size())
     };
 
+    std::chrono::milliseconds request_timeout{10ms};
+
     PieceManager piece_manager(
-        piece_data.size(), piece_data.size(), file_manager, piece_hash.get()
+        piece_data.size(), piece_data.size(), file_manager, piece_hash.get(), request_timeout
     );
 
     static constexpr std::array<std::byte, 1> peer1_bitfield{{std::byte{0b10000000}}};
@@ -96,7 +98,7 @@ TEST_CASE("PieceManager: Single Piece", "[PieceManager]") {
 
         // Get same block after timeout
         {
-            std::this_thread::sleep_for(BLOCK_REQUEST_TIMEOUT);
+            std::this_thread::sleep_for(request_timeout);
             block = piece_manager.request_next_block(peer1_bitfield);
 
             REQUIRE(block.has_value());
@@ -213,7 +215,7 @@ TEST_CASE("PieceManager: Single Piece", "[PieceManager]") {
         );
 
         // let block4 timeout
-        std::this_thread::sleep_for(BLOCK_REQUEST_TIMEOUT);
+        std::this_thread::sleep_for(request_timeout);
 
         // Send block4
         block = piece_manager.request_next_block(peer1_bitfield);
@@ -281,13 +283,16 @@ TEST_CASE("PieceManager: Multiple Pieces", "[PieceManager]") {
 
     piece_hashes.append(reinterpret_cast<const char*>(piece_hash.get().data()), crypto::SHA1_SIZE);
 
+    std::chrono::milliseconds request_timeout{10ms};
+
     PieceManager piece_manager(
         2 * BLOCK_SIZE,
         piece_data.size(),
         file_manager,
         std::span<const uint8_t>(
             reinterpret_cast<const uint8_t*>(piece_hashes.data()), piece_hashes.size()
-        )
+        ),
+        request_timeout
     );
 
     static constexpr std::array<std::byte, 1> peer1_bitfield{{std::byte{0b11111100}}};
@@ -337,7 +342,7 @@ TEST_CASE("PieceManager: Multiple Pieces", "[PieceManager]") {
 
         // Get block after timeout
         {
-            std::this_thread::sleep_for(BLOCK_REQUEST_TIMEOUT);
+            std::this_thread::sleep_for(request_timeout);
             for (auto i : std::views::iota(0, 6)) {
                 block = piece_manager.request_next_block(peer1_bitfield);
             }

@@ -34,7 +34,7 @@ class PieceManager {
               pieces_cnt{1 + (torrent_size - 1) / piece_size},
               block_request_timeout{request_timeout},
               pieces_left{pieces_cnt},
-              file_manager{file_manager},
+              file_manager{std::move(file_manager)},
               allocator(piece_size, max_active_requests),
               piece_completed(pieces_cnt, false),
               piece_avail(pieces_cnt, 0),

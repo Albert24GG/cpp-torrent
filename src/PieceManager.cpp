@@ -9,7 +9,7 @@
 
 namespace torrent {
 
-void PieceManager::update_pieces_availability(std::span<const std::byte> bitfield, char sign) {
+void PieceManager::update_pieces_availability(std::span<const std::byte> bitfield, int8_t sign) {
     for (auto piece_idx : std::views::iota(0U, pieces_cnt)) {
         // Get the bit that represents the availability of the piece
         uint8_t avail{get_bit(bitfield, piece_idx)};

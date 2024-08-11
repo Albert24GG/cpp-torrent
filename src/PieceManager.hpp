@@ -62,7 +62,7 @@ class PieceManager {
         ) -> std::optional<std::tuple<uint32_t, size_t, size_t>>;
 
     private:
-        void update_pieces_availability(std::span<const std::byte> bitfield, char sign);
+        void update_pieces_availability(std::span<const std::byte> bitfield, int8_t sign);
 
         /**
          * Update the availability of a piece

@@ -19,7 +19,6 @@ namespace torrent {
 
 static constexpr size_t MAX_MEMPOOL_SIZE{1ULL << 29U};  // 512MB
 
-using namespace std::literals::chrono_literals;
 class PieceManager {
     public:
         PieceManager(
@@ -27,7 +26,7 @@ class PieceManager {
             size_t                                    torrent_size,
             std::shared_ptr<torrent::fs::FileManager> file_manager,
             std::span<const uint8_t>                  piece_hashes,
-            std::chrono::milliseconds                 request_timeout = 10s
+            std::chrono::milliseconds                 request_timeout = std::chrono::seconds(10)
         )
             : max_active_requests{MAX_MEMPOOL_SIZE / piece_size},
               piece_size{piece_size},

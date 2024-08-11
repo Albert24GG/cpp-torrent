@@ -13,13 +13,12 @@ namespace torrent {
 
 static constexpr size_t BLOCK_SIZE{1ULL << 14U};
 
-using namespace std::literals::chrono_literals;
 class Piece {
     public:
         Piece(
             size_t                          size,
             torrent::utils::PieceAllocator& allocator,
-            std::chrono::milliseconds       request_timeout = 10s
+            std::chrono::milliseconds       request_timeout = std::chrono::seconds(10)
         )
             : piece_size{size},
               blocks_cnt{1 + (size - 1) / BLOCK_SIZE},

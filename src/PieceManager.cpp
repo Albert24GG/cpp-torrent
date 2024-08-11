@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <ranges>
 #include <span>
+#include <spdlog/spdlog.h>
 
 namespace torrent {
 
@@ -31,11 +32,14 @@ void PieceManager::receive_block(
     auto& piece = requested_pieces.at(piece_index);
     piece.receive_block(block, offset);
 
+    spdlog::debug("Received block at offset {} for piece {}", offset, piece_index);
+
     if (!piece.is_complete()) {
         return;
     }
 
     // Piece is complete
+    spdlog::debug("Piece {} is complete", piece_index);
 
     auto piece_data{piece.get_data()};
     auto piece_data_uint8_view{std::span<const uint8_t>(
@@ -49,6 +53,7 @@ void PieceManager::receive_block(
     if (hash != ref_hash) {
         // If hashes mismatch, mark piecd as incomplete
         piece_completed[piece_index] = false;
+        spdlog::warn("Piece {} hash mismatch. Discarding...", piece_index);
     } else {
         // If hashes match, write the piece to disk
         auto piece_data_char_view{std::span<const char>(
@@ -66,6 +71,7 @@ void PieceManager::receive_block(
 auto PieceManager::request_next_block(std::span<const std::byte> bitfield
 ) -> std::optional<std::tuple<uint32_t, size_t, size_t>> {
     if (pieces_left == 0) {
+        spdlog::debug("No more blocks to download");
         return std::nullopt;
     }
 
@@ -97,8 +103,12 @@ auto PieceManager::request_next_block(std::span<const std::byte> bitfield
 
         auto [offset, block_size] = block_info.value();
 
+        spdlog::debug("Requesting block at offset {} for piece {}", offset, piece_idx);
+
         return std::make_tuple(piece_idx, offset, block_size);
     }
+
+    spdlog::debug("No available block to request for specified bitfield");
 
     return std::nullopt;
 }

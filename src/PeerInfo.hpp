@@ -18,3 +18,10 @@ struct PeerInfo {
 };
 
 }  // namespace torrent
+
+template <>
+struct std::hash<torrent::PeerInfo> {
+        std::size_t operator()(const torrent::PeerInfo& peer_info) const noexcept {
+            return std::hash<std::string>{}(peer_info.ip) ^ std::hash<uint16_t>{}(peer_info.port);
+        }
+};

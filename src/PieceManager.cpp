@@ -2,6 +2,7 @@
 
 #include "Crypto.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <ranges>
 #include <span>
@@ -13,12 +14,36 @@ void PieceManager::update_pieces_availability(std::span<const std::byte> bitfiel
     for (auto piece_idx : std::views::iota(0U, pieces_cnt)) {
         // Get the bit that represents the availability of the piece
         uint8_t avail{get_bit(bitfield, piece_idx)};
-
-        if (avail != 0U) {
-            uint16_t new_avail{static_cast<uint16_t>(piece_avail[piece_idx] + sign * avail)};
-            update_piece_availability(piece_idx, new_avail);
-        }
+        piece_avail[piece_idx] += sign * avail;
     }
+    are_pieces_sorted = false;
+}
+
+void PieceManager::add_available_piece(size_t piece_index) {
+    // If the pieces are sorted, we can update the availability without resorting the entire vector
+    if (are_pieces_sorted) {
+        // The index in the sorted_pieces vector of the last piece with the same availability as the
+        // piece to be increased
+        auto last_equal_piece =
+            std::upper_bound(
+                sorted_pieces.begin(),
+                sorted_pieces.end(),
+                piece_avail[piece_index],
+                [&](uint32_t a, uint32_t b) { return piece_avail[a] < piece_avail[b]; }
+            ) -
+            sorted_pieces.begin() - 1;
+
+        // The index in the sorted_pieces vector of the piece to be increased
+        auto increased_piece = last_equal_piece;
+        for (; increased_piece > 0 && sorted_pieces[increased_piece] != piece_index;
+             --increased_piece) {
+            ;
+        }
+
+        // Swap the piece with the last piece that has the same availability
+        std::swap(sorted_pieces[increased_piece], sorted_pieces[last_equal_piece]);
+    }
+    ++piece_avail[piece_index];
 }
 
 void PieceManager::receive_block(
@@ -73,6 +98,13 @@ auto PieceManager::request_next_block(std::span<const std::byte> bitfield
     if (pieces_left == 0) {
         spdlog::debug("No more blocks to download");
         return std::nullopt;
+    }
+
+    if (!are_pieces_sorted) {
+        std::sort(sorted_pieces.begin(), sorted_pieces.end(), [&](uint32_t a, uint32_t b) {
+            return piece_avail[a] < piece_avail[b];
+        });
+        are_pieces_sorted = true;
     }
 
     for (auto piece_idx : sorted_pieces) {

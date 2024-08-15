@@ -7,9 +7,8 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <numeric>
 #include <optional>
-#include <ranges>
-#include <set>
 #include <span>
 #include <tuple>
 #include <unordered_map>
@@ -37,42 +36,34 @@ class PieceManager {
               file_manager{std::move(file_manager)},
               allocator(piece_size, max_active_requests),
               piece_completed(pieces_cnt, false),
-              piece_avail(pieces_cnt, 0),
+              piece_avail(pieces_cnt),
               piece_hashes{piece_hashes},
-              sorted_pieces(PieceComparator(piece_avail)) {
-            // TODO: figure out why I cant insert a range
-            for (auto i : std::views::iota(0U, pieces_cnt)) {
-                sorted_pieces.insert(i);
-            }
+              sorted_pieces(pieces_cnt) {
+            // Fill the sorted_pieces vector with indices of pieces
+            std::iota(sorted_pieces.begin(), sorted_pieces.end(), 0);
         }
 
         void add_peer_bitfield(std::span<const std::byte> bitfield) {
             update_pieces_availability(bitfield, +1);
         }
+
         void remove_peer_bitfield(std::span<const std::byte> bitfield) {
             update_pieces_availability(bitfield, -1);
         }
-        void add_available_piece(size_t piece_index) {
-            update_piece_availability(piece_index, piece_avail[piece_index] + 1);
-        }
+
+        void add_available_piece(size_t piece_index);
 
         void receive_block(size_t piece_index, std::span<const std::byte> block, size_t offset);
         auto request_next_block(std::span<const std::byte> bitfield
         ) -> std::optional<std::tuple<uint32_t, size_t, size_t>>;
 
     private:
-        void update_pieces_availability(std::span<const std::byte> bitfield, int8_t sign);
-
         /**
-         * Update the availability of a piece
-         * @param piece_index Index of the piece
-         * @param availability New availability of the piece
+         * Update the availability of pieces
+         * @param bitfield Bitfield of the peer
+         * @param sign +1 to add, -1 to remove
          */
-        void update_piece_availability(size_t piece_index, uint16_t availability) {
-            sorted_pieces.erase(piece_index);
-            piece_avail[piece_index] = availability;
-            sorted_pieces.insert(piece_index);
-        }
+        void update_pieces_availability(std::span<const std::byte> bitfield, int8_t sign);
 
         static uint8_t get_bit(std::span<const std::byte> bitfield, size_t piece_index) {
             return (static_cast<uint8_t>(bitfield[piece_index >> 3]) >> (7 - (piece_index & 7))) &
@@ -93,24 +84,9 @@ class PieceManager {
         std::unordered_map<size_t, torrent::Piece> requested_pieces;
         std::span<const uint8_t>                   piece_hashes;
 
-        class PieceComparator {
-            public:
-                explicit PieceComparator(const std::vector<uint16_t>& piece_avail)
-                    : availability{piece_avail} {}
-
-                bool operator()(uint32_t i, uint32_t j) const {
-                    if (availability[i] == availability[j]) {
-                        return i < j;
-                    }
-                    return availability[i] < availability[j];
-                }
-
-            private:
-                std::span<const uint16_t> availability;
-        };
-
-        // Set of indices of pieces sorted by availability
-        std::set<uint32_t, PieceComparator> sorted_pieces;
+        // Vector of indices of pieces sorted by availability
+        std::vector<uint32_t> sorted_pieces;
+        bool                  are_pieces_sorted{false};
 };
 
 }  // namespace torrent

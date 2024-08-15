@@ -355,6 +355,23 @@ TEST_CASE("PieceManager: Multiple Pieces", "[PieceManager]") {
             REQUIRE(offset == BLOCK_SIZE);
             REQUIRE(length == BLOCK_SIZE);
         }
+
+        // Get block after adding new availability
+        {
+            std::this_thread::sleep_for(request_timeout);
+            // Add availability for piece 1
+            piece_manager.add_available_piece(1);
+            for (auto i : std::views::iota(0, 7)) {
+                block = piece_manager.request_next_block(peer1_bitfield);
+            }
+
+            REQUIRE(block.has_value());
+
+            auto [index, offset, length] = block.value();
+            REQUIRE(index == 5);
+            REQUIRE(offset == 0);
+            REQUIRE(length == BLOCK_SIZE);
+        }
     }
 
     SECTION("Receive pieces") {

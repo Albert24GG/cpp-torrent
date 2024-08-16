@@ -59,9 +59,11 @@ class Piece {
 
         bool is_block_timed_out(size_t block_index) const {
             auto request_time = get_block_request_time(block_index);
-            return !request_time.has_value() ||
-                   (std::chrono::steady_clock::now() - request_time.value() >= block_request_timeout
-                   );
+            return request_time
+                .transform([this](auto time) {
+                    return std::chrono::steady_clock::now() - time >= block_request_timeout;
+                })
+                .value_or(true);
         }
 
         size_t                                                 piece_size;

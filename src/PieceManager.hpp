@@ -54,8 +54,11 @@ class PieceManager {
         void add_available_piece(size_t piece_index);
 
         void receive_block(size_t piece_index, std::span<const std::byte> block, size_t offset);
+
         auto request_next_block(std::span<const std::byte> bitfield
         ) -> std::optional<std::tuple<uint32_t, size_t, size_t>>;
+
+        bool completed() const { return pieces_left == 0; }
 
     private:
         /**

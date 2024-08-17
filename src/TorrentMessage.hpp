@@ -42,7 +42,7 @@ enum MessageType : uint8_t {
  * @return The handshake message
  */
 HandshakeMessage create_handshake_message(
-    const crypto::Sha1& info_hash, const std::span<char, 20> peer_id
+    const crypto::Sha1& info_hash, std::span<const char, 20> peer_id
 );
 
 /**

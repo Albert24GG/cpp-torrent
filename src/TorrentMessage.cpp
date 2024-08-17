@@ -8,7 +8,7 @@
 namespace torrent::message {
 
 HandshakeMessage create_handshake_message(
-    const crypto::Sha1& info_hash, std::span<char, 20> peer_id
+    const crypto::Sha1& info_hash, std::span<const char, 20> peer_id
 ) {
     HandshakeMessage handshake_message{};
 

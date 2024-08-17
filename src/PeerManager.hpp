@@ -22,7 +22,7 @@ class PeerManager {
         PeerManager(
             std::shared_ptr<PieceManager> piece_manager,
             const crypto::Sha1&           info_hash,
-            std::span<char, 20>           peer_id
+            std::span<const char, 20>     peer_id
         )
             : piece_manager{std::move(piece_manager)},
               info_hash{info_hash},

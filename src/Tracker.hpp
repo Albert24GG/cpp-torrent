@@ -2,6 +2,7 @@
 
 #include "Bencode.hpp"
 #include "Crypto.hpp"
+#include "Error.hpp"
 #include "PeerInfo.hpp"
 
 #include <chrono>
@@ -28,7 +29,11 @@ class Tracker {
               info_hash(info_hash),
               torr_client_id(std::move(client_id)),
               torr_client_port(client_port),
-              torrent_size(torrent_size) {}
+              torrent_size(torrent_size) {
+            if (torr_client_id.size() != 20) {
+                err::throw_with_trace("Client ID must be 20 bytes long");
+            }
+        }
 
         std::optional<std::vector<PeerInfo>> retrieve_peers(size_t downloaded, size_t uploaded = 0);
 

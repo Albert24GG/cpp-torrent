@@ -29,7 +29,7 @@ TEST_CASE("Tracker: retrieve_peers", "[Tracker]") {
     tracker.wait_until_ready();
 
     torrent::Tracker torrent_tracker{
-        "http://localhost:8080/announce", info_hash, "client_id", 6'886, 1'000
+        "http://localhost:8080/announce", info_hash, "-UT1234-123456789012", 6'886, 1'000
     };
 
     auto retrieved_peers = torrent_tracker.retrieve_peers(0);

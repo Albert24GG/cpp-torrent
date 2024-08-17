@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Crypto.hpp"
+#include "Error.hpp"
 #include "PeerConnection.hpp"
 #include "PeerInfo.hpp"
 #include "PieceManager.hpp"
@@ -10,6 +11,7 @@
 #include <asio.hpp>
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <thread>
 #include <unordered_map>
 
@@ -22,11 +24,16 @@ class PeerManager {
         PeerManager(
             std::shared_ptr<PieceManager> piece_manager,
             const crypto::Sha1&           info_hash,
-            std::span<const char, 20>     peer_id
+            const std::string&            peer_id
         )
-            : piece_manager{std::move(piece_manager)},
-              info_hash{info_hash},
-              handshake_message{message::create_handshake_message(info_hash, peer_id)} {}
+            : piece_manager(std::move(piece_manager)), info_hash(info_hash) {
+            if (peer_id.size() != 20) {
+                err::throw_with_trace("Peer ID must be 20 bytes long");
+            }
+            handshake_message = message::create_handshake_message(
+                info_hash, std::span<const char, 20>(peer_id.data(), 20)
+            );
+        }
 
         PeerManager(const PeerManager&)            = delete;
         PeerManager& operator=(const PeerManager&) = delete;

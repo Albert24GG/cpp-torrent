@@ -2,6 +2,7 @@
 
 #include "File.hpp"
 
+#include <numeric>
 #include <ranges>
 
 namespace torrent::fs {
@@ -37,4 +38,9 @@ void FileManager::write(std::span<const char> data, size_t offset) {
     }
 }
 
+size_t FileManager::get_total_length() const {
+    return std::accumulate(files.begin(), files.end(), size_t{0}, [](size_t acc, const auto& file) {
+        return acc + file.second.get_length();
+    });
+}
 }  // namespace torrent::fs

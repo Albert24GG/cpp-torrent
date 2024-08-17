@@ -24,6 +24,8 @@ class FileManager {
 
         void write(std::span<const char> data, size_t offset);
 
+        [[nodiscard]] size_t get_total_length() const;
+
     private:
         // pair containing the file start_offset and the file object
         std::vector<std::pair<size_t, File>> files;

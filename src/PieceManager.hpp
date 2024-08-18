@@ -51,9 +51,9 @@ class PieceManager {
             update_pieces_availability(bitfield, -1);
         }
 
-        void add_available_piece(size_t piece_index);
+        void add_available_piece(uint32_t piece_index);
 
-        void receive_block(size_t piece_index, std::span<const std::byte> block, size_t offset);
+        void receive_block(uint32_t piece_index, std::span<const std::byte> block, size_t offset);
 
         auto request_next_block(std::span<const std::byte> bitfield
         ) -> std::optional<std::tuple<uint32_t, size_t, size_t>>;
@@ -68,7 +68,7 @@ class PieceManager {
          */
         void update_pieces_availability(std::span<const std::byte> bitfield, int8_t sign);
 
-        static uint8_t get_bit(std::span<const std::byte> bitfield, size_t piece_index) {
+        static uint8_t get_bit(std::span<const std::byte> bitfield, uint32_t piece_index) {
             return (static_cast<uint8_t>(bitfield[piece_index >> 3]) >> (7 - (piece_index & 7))) &
                    1U;
         }

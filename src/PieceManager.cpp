@@ -19,7 +19,7 @@ void PieceManager::update_pieces_availability(std::span<const std::byte> bitfiel
     are_pieces_sorted = false;
 }
 
-void PieceManager::add_available_piece(size_t piece_index) {
+void PieceManager::add_available_piece(uint32_t piece_index) {
     // If the pieces are sorted, we can update the availability without resorting the entire vector
     if (are_pieces_sorted) {
         // The index in the sorted_pieces vector of the last piece with the same availability as the
@@ -47,7 +47,7 @@ void PieceManager::add_available_piece(size_t piece_index) {
 }
 
 void PieceManager::receive_block(
-    size_t piece_index, std::span<const std::byte> block, size_t offset
+    uint32_t piece_index, std::span<const std::byte> block, size_t offset
 ) {
     // If the piece is not requested, ignore the block
     if (!requested_pieces.contains(piece_index)) {

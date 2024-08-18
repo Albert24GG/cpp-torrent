@@ -6,7 +6,7 @@
 namespace torrent {
 
 void Piece::receive_block(std::span<const std::byte> block, size_t offset) {
-    size_t block_index{offset / BLOCK_SIZE};
+    auto block_index{get_block_index(offset)};
 
     // if the block is already complete, ignore it
     if (block_received[block_index]) {

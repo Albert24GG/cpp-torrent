@@ -48,16 +48,16 @@ class Piece {
         std::span<const std::byte> get_data() { return piece_data; }
 
     private:
-        static size_t get_block_index(size_t offset) { return offset / BLOCK_SIZE; }
+        static uint32_t get_block_index(size_t offset) { return offset / BLOCK_SIZE; }
 
-        auto get_block_request_time(size_t block_index
+        auto get_block_request_time(uint32_t block_index
         ) const -> std::optional<std::chrono::time_point<std::chrono::steady_clock>> {
             return block_request_time.contains(block_index)
                        ? std::make_optional(block_request_time.at(block_index))
                        : std::nullopt;
         }
 
-        bool is_block_timed_out(size_t block_index) const {
+        bool is_block_timed_out(uint32_t block_index) const {
             auto request_time = get_block_request_time(block_index);
             return request_time
                 .transform([this](auto time) {
@@ -75,7 +75,7 @@ class Piece {
         // bitset to keep track of which blocks have been received
         std::vector<bool> block_received;
         // map to keep track of the time when a block was requested
-        std::unordered_map<size_t, std::chrono::time_point<std::chrono::steady_clock>>
+        std::unordered_map<uint32_t, std::chrono::time_point<std::chrono::steady_clock>>
             block_request_time;
 };
 

@@ -47,7 +47,7 @@ void PieceManager::add_available_piece(uint32_t piece_index) {
 }
 
 void PieceManager::receive_block(
-    uint32_t piece_index, std::span<const std::byte> block, size_t offset
+    uint32_t piece_index, std::span<const std::byte> block, uint32_t offset
 ) {
     // If the piece is not requested, ignore the block
     if (!requested_pieces.contains(piece_index)) {
@@ -94,7 +94,7 @@ void PieceManager::receive_block(
 }
 
 auto PieceManager::request_next_block(std::span<const std::byte> bitfield
-) -> std::optional<std::tuple<uint32_t, size_t, size_t>> {
+) -> std::optional<std::tuple<uint32_t, uint32_t, uint32_t>> {
     if (pieces_left == 0) {
         spdlog::debug("No more blocks to download");
         return std::nullopt;
@@ -117,9 +117,8 @@ auto PieceManager::request_next_block(std::span<const std::byte> bitfield
             if (requested_pieces.size() >= max_active_requests) {
                 continue;
             }
-            size_t cur_piece_size{
-                piece_idx == pieces_cnt - 1 ? 1 + (torrent_size - 1) % piece_size : piece_size
-            };
+            uint32_t cur_piece_size =
+                piece_idx == pieces_cnt - 1 ? 1 + (torrent_size - 1) % piece_size : piece_size;
             requested_pieces.emplace(
                 piece_idx, Piece(cur_piece_size, allocator, block_request_timeout)
             );

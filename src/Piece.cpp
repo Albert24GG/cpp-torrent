@@ -25,19 +25,19 @@ void Piece::receive_block(std::span<const std::byte> block, size_t offset) {
     --blocks_left;
 }
 
-auto Piece::request_next_block() -> std::optional<std::pair<size_t, size_t>> {
+auto Piece::request_next_block() -> std::optional<std::pair<uint32_t, uint32_t>> {
     if (blocks_left == 0) {
         return std::nullopt;
     }
 
-    for (auto i : std::views::iota(0ULL, blocks_cnt)) {
+    for (auto i : std::views::iota(0U, blocks_cnt)) {
         // if the block has been received and it has not timed out, skip it
         if (block_received[i] || !is_block_timed_out(i)) {
             continue;
         }
         block_request_time.insert_or_assign(i, std::chrono::steady_clock::now());
-        size_t offset{i * BLOCK_SIZE};
-        size_t block_size{i == blocks_cnt - 1 ? 1 + (piece_size - 1) % BLOCK_SIZE : BLOCK_SIZE};
+        uint32_t offset{i * BLOCK_SIZE};
+        uint32_t block_size{i == blocks_cnt - 1 ? 1 + (piece_size - 1) % BLOCK_SIZE : BLOCK_SIZE};
 
         return std::make_pair(offset, block_size);
     }

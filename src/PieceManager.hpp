@@ -21,7 +21,7 @@ static constexpr size_t MAX_MEMPOOL_SIZE{1ULL << 29U};  // 512MB
 class PieceManager {
     public:
         PieceManager(
-            size_t                                    piece_size,
+            uint32_t                                  piece_size,
             size_t                                    torrent_size,
             std::shared_ptr<torrent::fs::FileManager> file_manager,
             std::span<const uint8_t>                  piece_hashes,
@@ -53,10 +53,10 @@ class PieceManager {
 
         void add_available_piece(uint32_t piece_index);
 
-        void receive_block(uint32_t piece_index, std::span<const std::byte> block, size_t offset);
+        void receive_block(uint32_t piece_index, std::span<const std::byte> block, uint32_t offset);
 
         auto request_next_block(std::span<const std::byte> bitfield
-        ) -> std::optional<std::tuple<uint32_t, size_t, size_t>>;
+        ) -> std::optional<std::tuple<uint32_t, uint32_t, uint32_t>>;
 
         bool completed() const { return pieces_left == 0; }
 
@@ -74,7 +74,7 @@ class PieceManager {
         }
 
         size_t                                    max_active_requests;
-        size_t                                    piece_size;
+        uint32_t                                  piece_size;
         size_t                                    torrent_size;
         size_t                                    pieces_cnt;
         size_t                                    pieces_left;
@@ -83,9 +83,9 @@ class PieceManager {
         torrent::utils::PieceAllocator            allocator;
         std::vector<bool>                         piece_completed;
         // Number of peers that have the ith piece
-        std::vector<uint16_t>                      piece_avail;
-        std::unordered_map<size_t, torrent::Piece> requested_pieces;
-        std::span<const uint8_t>                   piece_hashes;
+        std::vector<uint16_t>                        piece_avail;
+        std::unordered_map<uint32_t, torrent::Piece> requested_pieces;
+        std::span<const uint8_t>                     piece_hashes;
 
         // Vector of indices of pieces sorted by availability
         std::vector<uint32_t> sorted_pieces;

@@ -11,12 +11,12 @@
 
 namespace torrent {
 
-static constexpr size_t BLOCK_SIZE{1ULL << 14U};
+static constexpr uint32_t BLOCK_SIZE{1ULL << 14U};
 
 class Piece {
     public:
         Piece(
-            size_t                          size,
+            uint32_t                        size,
             torrent::utils::PieceAllocator& allocator,
             std::chrono::milliseconds       request_timeout = std::chrono::seconds(10)
         )
@@ -41,14 +41,14 @@ class Piece {
          *@return a pair containing the offset and the size of the block to be requested
                   If there are no more blocks to be requested, returns an empty optional
          */
-        auto request_next_block() -> std::optional<std::pair<size_t, size_t>>;
+        auto request_next_block() -> std::optional<std::pair<uint32_t, uint32_t>>;
 
         bool is_complete() const { return blocks_left == 0; }
 
         std::span<const std::byte> get_data() { return piece_data; }
 
     private:
-        static uint32_t get_block_index(size_t offset) { return offset / BLOCK_SIZE; }
+        static uint32_t get_block_index(uint32_t offset) { return offset / BLOCK_SIZE; }
 
         auto get_block_request_time(uint32_t block_index
         ) const -> std::optional<std::chrono::time_point<std::chrono::steady_clock>> {
@@ -66,7 +66,7 @@ class Piece {
                 .value_or(true);
         }
 
-        size_t                                                 piece_size;
+        uint32_t                                               piece_size;
         size_t                                                 blocks_cnt;
         size_t                                                 blocks_left;
         std::chrono::milliseconds                              block_request_timeout;

@@ -13,15 +13,6 @@
 
 namespace torrent::peer {
 
-namespace timeout {
-
-    static constexpr std::chrono::seconds SEND_TIMEOUT{10};
-    static constexpr std::chrono::seconds RECEIVE_TIMEOUT{10};
-    static constexpr std::chrono::seconds HANDSHAKE{10};
-    static constexpr std::chrono::seconds CONNECTION{10};
-
-};  // namespace timeout
-
 enum class PeerState : uint8_t {
     UNINITIATED,
     CONNECTING,

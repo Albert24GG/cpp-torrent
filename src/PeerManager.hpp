@@ -17,8 +17,6 @@
 
 namespace torrent {
 
-constexpr auto CONN_CLEANUP_INTERVAL = std::chrono::seconds{10};
-
 class PeerManager {
     public:
         PeerManager(

@@ -1,5 +1,6 @@
 #include "PeerManager.hpp"
 
+#include "Duration.hpp"
 #include "PeerConnection.hpp"
 
 #include <asio.hpp>
@@ -116,7 +117,7 @@ awaitable<void> PeerManager::cleanup_peer_connections() {
 
     // TODO: Change the condition to a stop flag
     while (true) {
-        timer.expires_after(CONN_CLEANUP_INTERVAL);
+        timer.expires_after(duration::PEER_CLEANUP_INTERVAL);
         co_await timer.async_wait(use_nothrow_awaitable);
 
         // Try to acquire the lock without blocking the thread

@@ -2,6 +2,7 @@
 
 #include "asio/use_awaitable.hpp"
 #include "Crypto.hpp"
+#include "Duration.hpp"
 #include "TorrentMessage.hpp"
 
 #include <asio.hpp>
@@ -96,7 +97,7 @@ auto PeerConnection::receive_handshake()
     spdlog::debug("Waiting for handshake message from peer {}:{}", peer_info.ip, peer_info.port);
 
     std::chrono::steady_clock::time_point deadline{
-        std::chrono::steady_clock::now() + timeout::HANDSHAKE
+        std::chrono::steady_clock::now() + duration::HANDSHAKE_TIMEOUT
     };
 
     // Receive the handshake message
@@ -130,7 +131,7 @@ auto PeerConnection::send_handshake(const message::HandshakeMessage& handshake_m
     spdlog::debug("Sending handshake message to peer {}:{}", peer_info.ip, peer_info.port);
 
     std::chrono::steady_clock::time_point deadline{
-        std::chrono::steady_clock::now() + timeout::HANDSHAKE
+        std::chrono::steady_clock::now() + duration::HANDSHAKE_TIMEOUT
     };
 
     auto result = co_await (send_data(handshake_message) || watchdog(deadline));
@@ -154,7 +155,7 @@ auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std
         *tcp::resolver(peer_conn_ctx).resolve(peer_info.ip, std::to_string(peer_info.port));
 
     std::chrono::steady_clock::time_point deadline{
-        std::chrono::steady_clock::now() + timeout::CONNECTION
+        std::chrono::steady_clock::now() + duration::CONNECTION_TIMEOUT
     };
 
     auto result =

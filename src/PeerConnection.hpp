@@ -25,12 +25,12 @@ enum class PeerState : uint8_t {
 class PeerConnection {
     public:
         PeerConnection(
-            asio::io_context& io_context, PieceManager& piece_manager, const PeerInfo& peer_info
+            asio::io_context& io_context, PieceManager& piece_manager, PeerInfo peer_info
         )
             : peer_conn_ctx{io_context},
               socket{io_context},
               piece_manager{piece_manager},
-              peer_info{peer_info} {}
+              peer_info{std::move(peer_info)} {}
 
         /*
          * Connect to the peer and perform the handshake.
@@ -61,7 +61,7 @@ class PeerConnection {
         asio::io_context&     peer_conn_ctx;
         asio::ip::tcp::socket socket;
         PieceManager&         piece_manager;
-        const PeerInfo&       peer_info;
+        PeerInfo              peer_info;
 
         bool      am_choking{true};
         bool      am_interested{false};

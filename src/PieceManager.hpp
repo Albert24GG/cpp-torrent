@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Duration.hpp"
 #include "FileManager.hpp"
 #include "Piece.hpp"
 #include "PieceAllocator.hpp"
@@ -25,7 +26,7 @@ class PieceManager {
             size_t                                    torrent_size,
             std::shared_ptr<torrent::fs::FileManager> file_manager,
             std::span<const uint8_t>                  piece_hashes,
-            std::chrono::milliseconds                 request_timeout = std::chrono::seconds(10)
+            std::chrono::milliseconds                 request_timeout = duration::REQUEST_TIMEOUT
         )
             : max_active_requests{MAX_MEMPOOL_SIZE / piece_size},
               piece_size{piece_size},

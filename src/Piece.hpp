@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Duration.hpp"
 #include "PieceAllocator.hpp"
 
 #include <chrono>
@@ -18,7 +19,7 @@ class Piece {
         Piece(
             uint32_t                        size,
             torrent::utils::PieceAllocator& allocator,
-            std::chrono::milliseconds       request_timeout = std::chrono::seconds(10)
+            std::chrono::milliseconds       request_timeout = duration::REQUEST_TIMEOUT
         )
             : piece_size{size},
               blocks_cnt{1 + (size - 1) / BLOCK_SIZE},

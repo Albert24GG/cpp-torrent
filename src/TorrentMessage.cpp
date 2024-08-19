@@ -54,7 +54,9 @@ HandshakeMessage create_handshake_message(
     return handshake_message;
 }
 
-std::optional<crypto::Sha1> parse_handshake_message(const HandshakeMessage& handshake_message) {
+std::optional<crypto::Sha1> parse_handshake_message(
+    std::span<const std::byte, HANDSHAKE_MESSAGE_SIZE> handshake_message
+) {
     // The message length is already checked by the caller to be 68
 
     // Check the protocol identifier length

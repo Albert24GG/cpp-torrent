@@ -92,8 +92,6 @@ auto PeerConnection::receive_data(std::span<std::byte> buffer
 
 auto PeerConnection::receive_handshake()
     -> awaitable<std::expected<crypto::Sha1, std::error_code>> {
-    message::HandshakeMessage handshake_message;
-
     spdlog::debug("Waiting for handshake message from peer {}:{}", peer_info.ip, peer_info.port);
 
     std::chrono::steady_clock::time_point deadline{
@@ -101,7 +99,7 @@ auto PeerConnection::receive_handshake()
     };
 
     // Receive the handshake message
-    auto result = co_await (receive_data(handshake_message) || watchdog(deadline));
+    auto result = co_await (receive_data(receive_buffer) || watchdog(deadline));
     std::expected<void, std::error_code> handshake_result;
 
     std::visit(
@@ -116,9 +114,10 @@ auto PeerConnection::receive_handshake()
     }
 
     // Parse the handshake message
-    auto info_hash = message::parse_handshake_message(handshake_message);
 
-    if (auto info_hash = message::parse_handshake_message(handshake_message);
+    if (auto info_hash = message::parse_handshake_message(
+            std::span<const std::byte, message::HANDSHAKE_MESSAGE_SIZE>(receive_buffer)
+        );
         !info_hash.has_value()) {
         co_return std::unexpected(std::error_code{});
     } else {
@@ -266,9 +265,10 @@ awaitable<void> PeerConnection::connect(
 
     // Send interested message
 
-    std::array<std::byte, 5> interested_message;
-
+    send_buffer.resize(message::MAX_SENT_MSG_SIZE);
+    std::span<std::byte, 5> interested_message(send_buffer);
     message::create_interested_message(interested_message);
+
     if (auto res = co_await send_message(interested_message); !res.has_value()) {
         spdlog::debug(
             "Failed to send interested message to peer {}:{} with error:\n{}",

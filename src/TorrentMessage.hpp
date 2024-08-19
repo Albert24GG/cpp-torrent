@@ -16,9 +16,9 @@ constexpr auto             PROTOCOL_IDENTIFIER_SIZE = 19;
 constexpr auto             RESERVED_SIZE            = 8;
 constexpr auto             INFO_HASH_SIZE           = crypto::SHA1_SIZE;
 constexpr auto             PEER_ID_SIZE             = 20;
+constexpr auto             MAX_SENT_MSG_SIZE        = 17;
 
 using HandshakeMessage = std::array<std::byte, HANDSHAKE_MESSAGE_SIZE>;
-using ParsedHandshake  = std::pair<crypto::Sha1, std::array<std::byte, 20>>;
 
 enum MessageType : uint8_t {
     CHOKE = 0,
@@ -38,7 +38,7 @@ enum MessageType : uint8_t {
 
 struct Message {
         MessageType                         id{};
-        std::optional<std::span<std::byte>> payload = std::nullopt;
+        std::optional<std::span<std::byte>> payload{std::nullopt};
 };
 
 /**
@@ -58,7 +58,9 @@ HandshakeMessage create_handshake_message(
  * @param handshake_message The handshake message
  * @return A pair consisting of the info hash and the peer id if the handshake message is valid
  */
-std::optional<crypto::Sha1> parse_handshake_message(const HandshakeMessage& handshake_message);
+std::optional<crypto::Sha1> parse_handshake_message(
+    std::span<const std::byte, HANDSHAKE_MESSAGE_SIZE> handshake_message
+);
 
 /**
  * @brief Serialize a message

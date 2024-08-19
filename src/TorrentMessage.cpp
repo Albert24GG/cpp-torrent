@@ -101,12 +101,18 @@ void serialize_message(const Message& msg, std::span<std::byte> buffer) {
 
     // Copy the message size to the buffer
     {
-        uint32_t message_size_network{
-            std::endian::native == std::endian::little ? std::byteswap(message_size) : message_size
-        };
+        uint32_t message_size_network = [message_size] -> uint32_t {
+            if constexpr (std::endian::native == std::endian::little) {
+                return std::byteswap(message_size);
+            } else {
+                return message_size;
+            }
+        }();
 
         std::ranges::copy(
-            std::span<const std::byte, 4>(reinterpret_cast<const std::byte*>(&message_size), 4),
+            std::span<const std::byte, 4>(
+                reinterpret_cast<const std::byte*>(&message_size_network), 4
+            ),
             std::begin(buffer)
         );
     }

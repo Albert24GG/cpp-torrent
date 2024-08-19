@@ -1,6 +1,5 @@
 #include "PeerConnection.hpp"
 
-#include "asio/use_awaitable.hpp"
 #include "Crypto.hpp"
 #include "Duration.hpp"
 #include "TorrentMessage.hpp"
@@ -8,7 +7,6 @@
 #include <asio.hpp>
 #include <asio/experimental/as_tuple.hpp>
 #include <asio/experimental/awaitable_operators.hpp>
-#include <asio/experimental/cancellation_condition.hpp>
 #include <chrono>
 #include <expected>
 #include <span>
@@ -18,6 +16,7 @@
 using asio::awaitable;
 using asio::ip::tcp;
 using asio::use_awaitable;
+namespace this_coro = asio::this_coro;
 using namespace asio::experimental::awaitable_operators;
 
 // Use the nothrow awaitable completion token to avoid exceptions
@@ -34,7 +33,7 @@ struct visitor : Callable... {
 awaitable<std::expected<void, std::error_code>> watchdog(
     asio::chrono::steady_clock::time_point& deadline
 ) {
-    asio::steady_timer timer{co_await asio::this_coro::executor};
+    asio::steady_timer timer{co_await this_coro::executor};
 
     auto now = std::chrono::steady_clock::now();
 
@@ -150,8 +149,8 @@ auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std
     spdlog::debug("Establishing connection with peer {}:{}", peer_info.ip, peer_info.port);
 
     // Resolve the peer endpoint
-    tcp::endpoint peer_endpoint =
-        *tcp::resolver(peer_conn_ctx).resolve(peer_info.ip, std::to_string(peer_info.port));
+    tcp::endpoint peer_endpoint = *tcp::resolver(co_await this_coro::executor)
+                                       .resolve(peer_info.ip, std::to_string(peer_info.port));
 
     std::chrono::steady_clock::time_point deadline{
         std::chrono::steady_clock::now() + duration::CONNECTION_TIMEOUT

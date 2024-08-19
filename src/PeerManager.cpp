@@ -12,6 +12,7 @@
 
 using asio::awaitable;
 using asio::co_spawn;
+namespace this_coro = asio::this_coro;
 
 // Use the nothrow awaitable completion token to avoid exceptions
 constexpr auto use_nothrow_awaitable = asio::experimental::as_tuple(asio::use_awaitable);
@@ -100,7 +101,7 @@ void PeerManager::stop() {
 }
 
 awaitable<void> PeerManager::handle_download_completion() {
-    asio::steady_timer timer(peer_conn_ctx);
+    asio::steady_timer timer(co_await this_coro::executor);
 
     while (!piece_manager->completed()) {
         timer.expires_after(std::chrono::seconds(1));
@@ -113,7 +114,7 @@ awaitable<void> PeerManager::handle_download_completion() {
 
 awaitable<void> PeerManager::cleanup_peer_connections() {
     // Acquire the lock to protect the peer_connections map
-    asio::steady_timer timer(peer_conn_ctx);
+    asio::steady_timer timer(co_await this_coro::executor);
 
     // TODO: Change the condition to a stop flag
     while (true) {

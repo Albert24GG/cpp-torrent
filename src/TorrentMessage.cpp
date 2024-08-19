@@ -1,6 +1,8 @@
 #include "TorrentMessage.hpp"
 
 #include <algorithm>
+#include <bit>
+#include <cassert>
 #include <cstdint>
 #include <ranges>
 #include <span>
@@ -82,4 +84,67 @@ std::optional<crypto::Sha1> parse_handshake_message(const HandshakeMessage& hand
     return info_hash;
 }
 
-};  // namespace torrent::message
+void serialize_message(const Message& msg, std::span<std::byte> buffer) {
+    assert(buffer.size() > 0 && "Message buffer must be at least 1 byte long");
+
+    if (msg.id == MessageType::KEEP_ALIVE) {
+        buffer[0] = static_cast<std::byte>(0);
+        return;
+    }
+
+    uint32_t message_size =
+        1 + msg.payload.transform([](const auto& p) { return p.size(); }).value_or(0);
+
+    assert(buffer.size() >= 4 + message_size && "Message buffer is too small");
+
+    // Copy the message size to the buffer
+    {
+        uint32_t message_size_network{
+            std::endian::native == std::endian::little ? std::byteswap(message_size) : message_size
+        };
+
+        std::ranges::copy(
+            std::span<const std::byte, 4>(reinterpret_cast<const std::byte*>(&message_size), 4),
+            std::begin(buffer)
+        );
+    }
+
+    std::byte id{static_cast<std::byte>(msg.id)};
+
+    // Copy the message id to the buffer
+    buffer[4] = id;
+
+    // Copy the payload to the buffer
+
+    if (msg.payload.has_value()) {
+        std::ranges::copy(msg.payload.value(), std::begin(buffer | std::views::drop(5)));
+    }
+}
+
+void create_request_message(
+    std::span<std::byte> buffer, uint32_t piece_index, uint32_t offset, uint32_t length
+) {
+    static std::array<std::byte, 12> request_payload{};
+
+    auto to_network_order_span = [](uint32_t value) -> std::span<std::byte, 4> {
+        value = std::endian::native == std::endian::little ? std::byteswap(value) : value;
+        return std::span<std::byte, 4>(reinterpret_cast<std::byte*>(&value), 4);
+    };
+
+    // Set the piece index
+    std::ranges::copy(to_network_order_span(piece_index), std::begin(request_payload));
+
+    // Set the offset
+    std::ranges::copy(
+        to_network_order_span(offset), std::begin(request_payload | std::views::drop(4))
+    );
+
+    // Set the length
+    std::ranges::copy(
+        to_network_order_span(length), std::begin(request_payload | std::views::drop(8))
+    );
+
+    serialize_message({MessageType::REQUEST, request_payload}, buffer);
+}
+
+}  // namespace torrent::message

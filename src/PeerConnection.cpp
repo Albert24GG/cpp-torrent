@@ -180,6 +180,26 @@ auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std
     co_return connection_result;
 }
 
+auto PeerConnection::send_message(std::span<const std::byte> message
+) -> asio::awaitable<std::expected<void, std::error_code>> {
+    std::chrono::steady_clock::time_point deadline{
+        std::chrono::steady_clock::now() + duration::SEND_MSG_TIMEOUT
+    };
+
+    auto result = co_await (send_data(message) || watchdog(deadline));
+
+    std::expected<void, std::error_code> send_result;
+
+    std::visit(
+        visitor{[&send_result](const std::expected<void, std::error_code>& res) {
+            send_result = res;
+        }},
+        result
+    );
+
+    co_return send_result;
+}
+
 awaitable<void> PeerConnection::connect(
     const message::HandshakeMessage& handshake_message, const crypto::Sha1& info_hash
 ) {
@@ -243,9 +263,28 @@ awaitable<void> PeerConnection::connect(
     // Set the state to connected
     state = PeerState::CONNECTED;
     spdlog::debug("Successfully connected to peer {}:{}", peer_info.ip, peer_info.port);
+
+    // Send interested message
+
+    std::array<std::byte, 5> interested_message;
+
+    message::create_interested_message(interested_message);
+    if (auto res = co_await send_message(interested_message); !res.has_value()) {
+        spdlog::debug(
+            "Failed to send interested message to peer {}:{} with error:\n{}",
+            peer_info.ip,
+            peer_info.port,
+            res.error().message()
+        );
+        // state =
+        //     res.error() == asio::error::timed_out ? PeerState::TIMED_OUT :
+        //     PeerState::DISCONNECTED;
+        state = PeerState::DISCONNECTED;
+        co_return;
+    }
+
     co_return;
 
     // TODO: Also send bitfield message after implementing upload capabilities
-    // TODO: Send interested message
 }
 }  // namespace torrent::peer

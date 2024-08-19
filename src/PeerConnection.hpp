@@ -58,6 +58,9 @@ class PeerConnection {
 
         auto establish_connection() -> asio::awaitable<std::expected<void, std::error_code>>;
 
+        auto send_message(std::span<const std::byte> message
+        ) -> asio::awaitable<std::expected<void, std::error_code>>;
+
         asio::io_context&     peer_conn_ctx;
         asio::ip::tcp::socket socket;
         PieceManager&         piece_manager;

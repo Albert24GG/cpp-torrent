@@ -2,8 +2,10 @@
 
 #include "Crypto.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string_view>
 
 namespace torrent::message {
@@ -34,6 +36,11 @@ enum MessageType : uint8_t {
     INVALID
 };
 
+struct Message {
+        MessageType                         id{};
+        std::optional<std::span<std::byte>> payload = std::nullopt;
+};
+
 /**
  * @brief Create a handshake message
  *
@@ -52,5 +59,34 @@ HandshakeMessage create_handshake_message(
  * @return A pair consisting of the info hash and the peer id if the handshake message is valid
  */
 std::optional<crypto::Sha1> parse_handshake_message(const HandshakeMessage& handshake_message);
+
+/**
+ * @brief Serialize a message
+ *
+ * @param msg The message to serialize
+ * @param buffer The buffer where the serialized message will be written
+ */
+void serialize_message(const Message& msg, std::span<std::byte> buffer);
+
+/**
+ * @brief Create an interested message
+ *
+ * @param buffer The buffer where the message will be written
+ */
+inline void create_interested_message(std::span<std::byte> buffer) {
+    serialize_message({MessageType::INTERESTED}, buffer);
+}
+
+/**
+ * @brief Create a request message
+ *
+ * @param buffer The buffer where the message will be written
+ * @param piece_index The index of the piece
+ * @param offset The offset of the block
+ * @param length The length of the block
+ */
+void create_request_message(
+    std::span<std::byte> buffer, uint32_t piece_index, uint32_t offset, uint32_t length
+);
 
 };  // namespace torrent::message

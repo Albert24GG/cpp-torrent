@@ -70,6 +70,23 @@ auto PeerConnection::send_data(std::span<const std::byte> buffer
     co_return std::expected<void, std::error_code>{};
 }
 
+auto PeerConnection::send_data_with_timeout(
+    std::span<const std::byte> buffer, std::chrono::milliseconds timeout
+) -> asio::awaitable<std::expected<void, std::error_code>> {
+    std::chrono::steady_clock::time_point deadline{std::chrono::steady_clock::now() + timeout};
+
+    auto result = co_await (send_data(buffer) || watchdog(deadline));
+    std::expected<void, std::error_code> return_res;
+
+    std::visit(
+        visitor{[&return_res](const std::expected<void, std::error_code>& res) { return_res = res; }
+        },
+        result
+    );
+
+    co_return return_res;
+}
+
 auto PeerConnection::receive_data(std::span<std::byte> buffer
 ) -> awaitable<std::expected<void, std::error_code>> {
     // Receive the data
@@ -89,23 +106,31 @@ auto PeerConnection::receive_data(std::span<std::byte> buffer
     co_return std::expected<void, std::error_code>{};
 }
 
+auto PeerConnection::receive_data_with_timeout(
+    std::span<std::byte> buffer, std::chrono::milliseconds timeout
+) -> asio::awaitable<std::expected<void, std::error_code>> {
+    std::chrono::steady_clock::time_point deadline{std::chrono::steady_clock::now() + timeout};
+
+    auto result = co_await (receive_data(buffer) || watchdog(deadline));
+    std::expected<void, std::error_code> return_res;
+
+    std::visit(
+        visitor{[&return_res](const std::expected<void, std::error_code>& res) { return_res = res; }
+        },
+        result
+    );
+
+    co_return return_res;
+}
+
 auto PeerConnection::receive_handshake()
     -> awaitable<std::expected<crypto::Sha1, std::error_code>> {
     spdlog::debug("Waiting for handshake message from peer {}:{}", peer_info.ip, peer_info.port);
 
-    std::chrono::steady_clock::time_point deadline{
-        std::chrono::steady_clock::now() + duration::HANDSHAKE_TIMEOUT
-    };
-
     // Receive the handshake message
-    auto result = co_await (receive_data(receive_buffer) || watchdog(deadline));
-    std::expected<void, std::error_code> handshake_result;
-
-    std::visit(
-        visitor{[&handshake_result](const std::expected<void, std::error_code>& res) {
-            handshake_result = res;
-        }},
-        result
+    auto handshake_result = co_await receive_data_with_timeout(
+        std::span<std::byte, message::HANDSHAKE_MESSAGE_SIZE>(receive_buffer),
+        duration::HANDSHAKE_TIMEOUT
     );
 
     if (!handshake_result.has_value()) {
@@ -128,21 +153,9 @@ auto PeerConnection::send_handshake(const message::HandshakeMessage& handshake_m
 ) -> awaitable<std::expected<void, std::error_code>> {
     spdlog::debug("Sending handshake message to peer {}:{}", peer_info.ip, peer_info.port);
 
-    std::chrono::steady_clock::time_point deadline{
-        std::chrono::steady_clock::now() + duration::HANDSHAKE_TIMEOUT
-    };
+    auto res = co_await send_data_with_timeout(handshake_message, duration::HANDSHAKE_TIMEOUT);
 
-    auto result = co_await (send_data(handshake_message) || watchdog(deadline));
-    std::expected<void, std::error_code> handshake_result;
-
-    std::visit(
-        visitor{[&handshake_result](const std::expected<void, std::error_code>& res) {
-            handshake_result = res;
-        }},
-        result
-    );
-
-    co_return handshake_result;
+    co_return res;
 }
 
 auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std::error_code>> {
@@ -268,7 +281,8 @@ awaitable<void> PeerConnection::connect(
     std::span<std::byte, 5> interested_message(send_buffer);
     message::create_interested_message(interested_message);
 
-    if (auto res = co_await send_message(interested_message); !res.has_value()) {
+    if (auto res = co_await send_data_with_timeout(interested_message, duration::SEND_MSG_TIMEOUT);
+        !res.has_value()) {
         spdlog::debug(
             "Failed to send interested message to peer {}:{} with error:\n{}",
             peer_info.ip,

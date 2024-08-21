@@ -24,12 +24,16 @@ void* MemoryPool::allocate() {
     return return_block;
 }
 void MemoryPool::deallocate(void* ptr) {
+    if (ptr == nullptr) {
+        return;
+    }
     if (next_free_block != nullptr) {
         *reinterpret_cast<size_t*>(ptr) = index_from_addr(next_free_block);
     } else {
         *reinterpret_cast<size_t*>(ptr) = block_count;
     }
     next_free_block = reinterpret_cast<std::byte*>(ptr);
+    ++free_blocks;
 }
 
 };  // namespace torrent::utils

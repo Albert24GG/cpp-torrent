@@ -9,6 +9,7 @@
 #include <asio/experimental/awaitable_operators.hpp>
 #include <chrono>
 #include <expected>
+#include <ranges>
 #include <span>
 #include <spdlog/spdlog.h>
 #include <variant>
@@ -191,24 +192,179 @@ auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std
     co_return connection_result;
 }
 
-auto PeerConnection::send_message(std::span<const std::byte> message
-) -> asio::awaitable<std::expected<void, std::error_code>> {
-    std::chrono::steady_clock::time_point deadline{
-        std::chrono::steady_clock::now() + duration::SEND_MSG_TIMEOUT
-    };
+void PeerConnection::load_block_requests() {
+    // Reset the buffer
+    send_buffer.clear();
 
-    auto result = co_await (send_data(message) || watchdog(deadline));
+    for (auto i : std::views::iota(0, MAX_BLOCKS_IN_FLIGHT)) {
+        auto request = piece_manager.request_next_block(bitfield);
+        if (!request.has_value()) {
+            break;
+        }
 
-    std::expected<void, std::error_code> send_result;
+        auto [piece_index, block_offset, block_size] = request.value();
+        send_buffer.insert(send_buffer.end(), 17, std::byte{0});
 
-    std::visit(
-        visitor{[&send_result](const std::expected<void, std::error_code>& res) {
-            send_result = res;
-        }},
-        result
-    );
+        message::create_request_message(
+            std::span<std::byte>(send_buffer).subspan(i * 17, 17),
+            piece_index,
+            block_offset,
+            block_size
+        );
+    }
+}
 
-    co_return send_result;
+awaitable<void> PeerConnection::send_requests() {
+    while (!piece_manager.completed()) {
+        co_await asio::steady_timer(co_await this_coro::executor, duration::REQUEST_INTERVAL)
+            .async_wait(use_nothrow_awaitable);
+        if (peer_choking) {
+            continue;
+        }
+        load_block_requests();
+
+        if (!send_buffer.empty()) {
+            auto res = co_await send_data_with_timeout(send_buffer, duration::SEND_MSG_TIMEOUT);
+
+            if (!res.has_value()) {
+                spdlog::debug(
+                    "Failed to send request message to peer {}:{} with error:\n{}",
+                    peer_info.ip,
+                    peer_info.port,
+                    res.error().message()
+                );
+                state = PeerState::DISCONNECTED;
+                co_return;
+            }
+        }
+    }
+    co_return;
+}
+
+awaitable<void> PeerConnection::receive_messages() {
+    while (!piece_manager.completed()) {
+        uint32_t message_size{};
+
+        std::expected<void, std::error_code> res;
+        res = co_await receive_data_with_timeout(
+            std::span<std::byte>(reinterpret_cast<std::byte*>(&message_size), 4),
+            duration::RECEIVE_MSG_TIMEOUT
+        );
+
+        if (!res.has_value()) {
+            spdlog::debug(
+                "Failed to receive message size from peer {}:{} with error:\n{}",
+                peer_info.ip,
+                peer_info.port,
+                res.error().message()
+            );
+            state = PeerState::DISCONNECTED;
+            co_return;
+        }
+
+        // Convert the message size to host byte order
+        if constexpr (std::endian::native == std::endian::little) {
+            message_size = std::byteswap(message_size);
+        }
+
+        // Keep-alive message
+        if (message_size == 0) {
+            continue;
+        }
+
+        std::byte id{};
+
+        res = co_await receive_data_with_timeout(
+            std::span<std::byte>(&id, 1), duration::RECEIVE_MSG_TIMEOUT
+        );
+
+        if (!res.has_value()) {
+            spdlog::debug(
+                "Failed to receive message id from peer {}:{} with error:\n{}",
+                peer_info.ip,
+                peer_info.port,
+                res.error().message()
+            );
+            state = PeerState::DISCONNECTED;
+            co_return;
+        }
+
+        std::optional<std::span<std::byte>> payload{std::nullopt};
+
+        if (message_size > 1) {
+            payload = std::span<std::byte>(receive_buffer).subspan(0, message_size - 1);
+
+            res =
+                co_await receive_data_with_timeout(payload.value(), duration::RECEIVE_MSG_TIMEOUT);
+
+            if (!res.has_value()) {
+                spdlog::debug(
+                    "Failed to receive message payload from peer {}:{} with error:\n{}",
+                    peer_info.ip,
+                    peer_info.port,
+                    res.error().message()
+                );
+                state = PeerState::DISCONNECTED;
+                co_return;
+            }
+        }
+
+        co_await handle_message({static_cast<message::MessageType>(id), payload});
+    }
+    co_return;
+}
+
+asio::awaitable<void> PeerConnection::handle_message(message::Message msg) {
+    using message::MessageType;
+    spdlog::debug("Received message with id: {}", static_cast<uint8_t>(msg.id));
+    switch (msg.id) {
+        case MessageType::CHOKE:
+            peer_choking = true;
+            break;
+        case MessageType::UNCHOKE:
+            peer_choking = false;
+            break;
+        case MessageType::INTERESTED:
+            break;
+        case MessageType::NOT_INTERESTED:
+            break;
+        case MessageType::HAVE:
+            handle_have_message(msg.payload.value());
+            break;
+        case MessageType::BITFIELD:
+            handle_bitfield_message(msg.payload.value());
+            break;
+        case MessageType::REQUEST:
+            break;
+        case MessageType::PIECE:
+            handle_piece_message(msg.payload.value());
+            break;
+    }
+    co_return;
+}
+
+void PeerConnection::handle_have_message(std::span<std::byte> payload) {
+    uint32_t piece_index{};
+    std::ranges::copy(std::span<std::byte, 4>(payload), reinterpret_cast<std::byte*>(&piece_index));
+    if constexpr (std::endian::native == std::endian::little) {
+        piece_index = std::byteswap(piece_index);
+    }
+    bitfield[piece_index >> 3] |= static_cast<std::byte>(1U << (7 - (piece_index & 7)));
+    piece_manager.add_available_piece(piece_index);
+}
+
+void PeerConnection::handle_bitfield_message(std::span<std::byte> payload) {
+    std::ranges::copy(payload | std::views::take(bitfield.size()), bitfield.begin());
+    piece_manager.add_peer_bitfield(bitfield);
+}
+
+void PeerConnection::handle_piece_message(std::span<std::byte> payload) {
+    auto parsed_message = message::parse_piece_message(payload);
+    if (!parsed_message.has_value()) {
+        return;
+    }
+    auto [piece_index, block_data, block_offset] = parsed_message.value();
+    piece_manager.receive_block(piece_index, block_data, block_offset);
 }
 
 awaitable<void> PeerConnection::connect(
@@ -275,9 +431,17 @@ awaitable<void> PeerConnection::connect(
     state = PeerState::CONNECTED;
     spdlog::debug("Successfully connected to peer {}:{}", peer_info.ip, peer_info.port);
 
+    co_return;
+
+    // TODO: Also send bitfield message after implementing upload capabilities
+}
+
+awaitable<void> PeerConnection::run() {
+    // Resize the send buffer to the max size of a message sent at once
+    send_buffer.resize(message::MAX_SENT_MSG_SIZE * MAX_BLOCKS_IN_FLIGHT);
+
     // Send interested message
 
-    send_buffer.resize(message::MAX_SENT_MSG_SIZE);
     std::span<std::byte, 5> interested_message(send_buffer);
     message::create_interested_message(interested_message);
 
@@ -296,8 +460,20 @@ awaitable<void> PeerConnection::connect(
         co_return;
     }
 
-    co_return;
+    // Set the state to running
 
-    // TODO: Also send bitfield message after implementing upload capabilities
+    state = PeerState::RUNNING;
+
+    // Resize the bitfield
+
+    bitfield.resize(1 + (piece_manager.get_piece_count() - 1) / 8);
+
+    // Resize the receive buffer to the max size of a payload received at once
+
+    receive_buffer.resize(std::max(8 + static_cast<size_t>(BLOCK_SIZE), bitfield.size()));
+
+    // Start the send requests and receive messages coroutines
+
+    co_await (send_requests() || receive_messages());
 }
 }  // namespace torrent::peer

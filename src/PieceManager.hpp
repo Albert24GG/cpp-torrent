@@ -61,6 +61,8 @@ class PieceManager {
 
         bool completed() const { return pieces_left == 0; }
 
+        size_t get_piece_count() const { return pieces_cnt; }
+
     private:
         /**
          * Update the availability of pieces

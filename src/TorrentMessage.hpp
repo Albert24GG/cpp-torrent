@@ -63,6 +63,16 @@ std::optional<crypto::Sha1> parse_handshake_message(
 );
 
 /**
+ * @brief Parse the piece message
+ *
+ * @param payload The payload of the message
+ * @return An optional tuple containing the piece index, the block data and the block offset, or
+ *         nullopt if the message is invalid
+ */
+auto parse_piece_message(std::span<const std::byte> payload
+) -> std::optional<std::tuple<uint32_t, std::span<const std::byte>, uint32_t>>;
+
+/**
  * @brief Serialize a message
  *
  * @param msg The message to serialize

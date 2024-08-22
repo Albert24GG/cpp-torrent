@@ -86,6 +86,37 @@ std::optional<crypto::Sha1> parse_handshake_message(
     return info_hash;
 }
 
+auto parse_piece_message(std::span<const std::byte> payload
+) -> std::optional<std::tuple<uint32_t, std::span<const std::byte>, uint32_t>> {
+    if (payload.size() < 8) {
+        return std::nullopt;
+    }
+
+    uint32_t piece_index = [payload] {
+        uint32_t index;
+        std::ranges::copy(payload | std::views::take(4), reinterpret_cast<std::byte*>(&index));
+        if constexpr (std::endian::native == std::endian::little) {
+            return std::byteswap(index);
+        } else {
+            return index;
+        }
+    }();
+
+    uint32_t offset = [payload] {
+        uint32_t off;
+        std::ranges::copy(
+            payload | std::views::drop(4) | std::views::take(4), reinterpret_cast<std::byte*>(&off)
+        );
+        if constexpr (std::endian::native == std::endian::little) {
+            return std::byteswap(off);
+        } else {
+            return off;
+        }
+    }();
+
+    return std::make_tuple(piece_index, payload | std::views::drop(8), offset);
+}
+
 void serialize_message(const Message& msg, std::span<std::byte> buffer) {
     assert(buffer.size() > 0 && "Message buffer must be at least 1 byte long");
 
@@ -134,7 +165,7 @@ void create_request_message(
 ) {
     static std::array<std::byte, 12> request_payload{};
 
-    auto to_network_order_span = [](uint32_t value) -> std::span<std::byte, 4> {
+    auto to_network_order_span = [](uint32_t& value) -> std::span<std::byte, 4> {
         value = std::endian::native == std::endian::little ? std::byteswap(value) : value;
         return std::span<std::byte, 4>(reinterpret_cast<std::byte*>(&value), 4);
     };

@@ -61,6 +61,8 @@ void PeerManager::add_peers(std::span<PeerInfo> peers) {
                             ep.what()
                         );
                     }
+                } else if (peer_connections.at(peer).get_state() == peer::PeerState::CONNECTED) {
+                    co_spawn(peer_conn_ctx, peer_connections.at(peer).run(), asio::detached);
                 }
 
                 if (--remaining_connections == 0) {

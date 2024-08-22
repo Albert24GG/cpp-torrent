@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utils.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -16,9 +18,7 @@ class MemoryPool {
             : block_count{block_count},
               free_blocks{block_count},
               // Align block size to max align_t
-              aligned_block_size{
-                  (block_size + (alignof(std::max_align_t) - 1)) & ~(alignof(std::max_align_t) - 1)
-              },
+              aligned_block_size{next_aligned(block_size)},
               pool(aligned_block_size * block_count),
               next_free_block{pool.data()} {};
 

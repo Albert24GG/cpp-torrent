@@ -4,6 +4,7 @@
 #include "FileManager.hpp"
 #include "Piece.hpp"
 #include "PieceAllocator.hpp"
+#include "Utils.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -22,16 +23,16 @@ static constexpr size_t MAX_MEMPOOL_SIZE{1ULL << 29U};  // 512MB
 class PieceManager {
     public:
         PieceManager(
-            uint32_t                                  piece_size,
-            size_t                                    torrent_size,
-            std::shared_ptr<torrent::fs::FileManager> file_manager,
-            std::span<const uint8_t>                  piece_hashes,
-            std::chrono::milliseconds                 request_timeout = duration::REQUEST_TIMEOUT
+            uint32_t                         piece_size,
+            size_t                           torrent_size,
+            std::shared_ptr<fs::FileManager> file_manager,
+            std::span<const uint8_t>         piece_hashes,
+            std::chrono::milliseconds        request_timeout = duration::REQUEST_TIMEOUT
         )
-            : max_active_requests{MAX_MEMPOOL_SIZE / piece_size},
+            : max_active_requests{utils::ceil_div(MAX_MEMPOOL_SIZE, piece_size)},
               piece_size{piece_size},
               torrent_size{torrent_size},
-              pieces_cnt{1 + (torrent_size - 1) / piece_size},
+              pieces_cnt{utils::ceil_div(torrent_size, piece_size)},
               block_request_timeout{request_timeout},
               pieces_left{pieces_cnt},
               file_manager{std::move(file_manager)},
@@ -76,19 +77,19 @@ class PieceManager {
                    1U;
         }
 
-        size_t                                    max_active_requests;
-        uint32_t                                  piece_size;
-        size_t                                    torrent_size;
-        size_t                                    pieces_cnt;
-        size_t                                    pieces_left;
-        std::chrono::milliseconds                 block_request_timeout;
-        std::shared_ptr<torrent::fs::FileManager> file_manager;
-        torrent::utils::PieceAllocator            allocator;
-        std::vector<bool>                         piece_completed;
+        size_t                           max_active_requests;
+        uint32_t                         piece_size;
+        size_t                           torrent_size;
+        size_t                           pieces_cnt;
+        size_t                           pieces_left;
+        std::chrono::milliseconds        block_request_timeout;
+        std::shared_ptr<fs::FileManager> file_manager;
+        std::vector<bool>                piece_completed;
         // Number of peers that have the ith piece
-        std::vector<uint16_t>                        piece_avail;
-        std::unordered_map<uint32_t, torrent::Piece> requested_pieces;
-        std::span<const uint8_t>                     piece_hashes;
+        std::vector<uint16_t>               piece_avail;
+        std::unordered_map<uint32_t, Piece> requested_pieces;
+        std::span<const uint8_t>            piece_hashes;
+        utils::PieceAllocator               allocator;
 
         // Vector of indices of pieces sorted by availability
         std::vector<uint32_t> sorted_pieces;

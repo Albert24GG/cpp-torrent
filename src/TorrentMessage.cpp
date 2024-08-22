@@ -1,5 +1,7 @@
 #include "TorrentMessage.hpp"
 
+#include "Utils.hpp"
+
 #include <algorithm>
 #include <bit>
 #include <cassert>
@@ -95,11 +97,7 @@ auto parse_piece_message(std::span<const std::byte> payload
     uint32_t piece_index = [payload] {
         uint32_t index;
         std::ranges::copy(payload | std::views::take(4), reinterpret_cast<std::byte*>(&index));
-        if constexpr (std::endian::native == std::endian::little) {
-            return std::byteswap(index);
-        } else {
-            return index;
-        }
+        return utils::network_to_host_order(index);
     }();
 
     uint32_t offset = [payload] {
@@ -107,11 +105,8 @@ auto parse_piece_message(std::span<const std::byte> payload
         std::ranges::copy(
             payload | std::views::drop(4) | std::views::take(4), reinterpret_cast<std::byte*>(&off)
         );
-        if constexpr (std::endian::native == std::endian::little) {
-            return std::byteswap(off);
-        } else {
-            return off;
-        }
+
+        return utils::network_to_host_order(off);
     }();
 
     return std::make_tuple(piece_index, payload | std::views::drop(8), offset);
@@ -132,14 +127,7 @@ void serialize_message(const Message& msg, std::span<std::byte> buffer) {
 
     // Copy the message size to the buffer
     {
-        uint32_t message_size_network = [message_size] -> uint32_t {
-            if constexpr (std::endian::native == std::endian::little) {
-                return std::byteswap(message_size);
-            } else {
-                return message_size;
-            }
-        }();
-
+        uint32_t message_size_network{utils::host_to_network_order(message_size)};
         std::ranges::copy(
             std::span<const std::byte, 4>(
                 reinterpret_cast<const std::byte*>(&message_size_network), 4
@@ -166,7 +154,7 @@ void create_request_message(
     static std::array<std::byte, 12> request_payload{};
 
     auto to_network_order_span = [](uint32_t& value) -> std::span<std::byte, 4> {
-        value = std::endian::native == std::endian::little ? std::byteswap(value) : value;
+        value = utils::host_to_network_order(value);
         return std::span<std::byte, 4>(reinterpret_cast<std::byte*>(&value), 4);
     };
 

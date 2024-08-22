@@ -2,6 +2,7 @@
 
 #include "Crypto.hpp"
 #include "PeerInfo.hpp"
+#include "Utils.hpp"
 
 #include <bit>
 #include <charconv>
@@ -38,9 +39,7 @@ std::string get_compact_peer_list(std::span<const torrent::PeerInfo>& peers) {
         );
 
         // convert the port number to network byte order
-        if constexpr (std::endian::native == std::endian::little) {
-            port = std::byteswap(port);
-        }
+        port = torrent::utils::host_to_network_order(port);
 
         // append the port number to the peer list
         std::ranges::copy(

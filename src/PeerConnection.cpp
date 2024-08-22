@@ -3,6 +3,7 @@
 #include "Crypto.hpp"
 #include "Duration.hpp"
 #include "TorrentMessage.hpp"
+#include "Utils.hpp"
 
 #include <asio.hpp>
 #include <asio/experimental/as_tuple.hpp>
@@ -263,9 +264,7 @@ awaitable<void> PeerConnection::receive_messages() {
         }
 
         // Convert the message size to host byte order
-        if constexpr (std::endian::native == std::endian::little) {
-            message_size = std::byteswap(message_size);
-        }
+        message_size = utils::network_to_host_order(message_size);
 
         // Keep-alive message
         if (message_size == 0) {
@@ -346,9 +345,7 @@ asio::awaitable<void> PeerConnection::handle_message(message::Message msg) {
 void PeerConnection::handle_have_message(std::span<std::byte> payload) {
     uint32_t piece_index{};
     std::ranges::copy(std::span<std::byte, 4>(payload), reinterpret_cast<std::byte*>(&piece_index));
-    if constexpr (std::endian::native == std::endian::little) {
-        piece_index = std::byteswap(piece_index);
-    }
+    piece_index = utils::network_to_host_order(piece_index);
     bitfield[piece_index >> 3] |= static_cast<std::byte>(1U << (7 - (piece_index & 7)));
     piece_manager.add_available_piece(piece_index);
 }
@@ -466,7 +463,7 @@ awaitable<void> PeerConnection::run() {
 
     // Resize the bitfield
 
-    bitfield.resize(1 + (piece_manager.get_piece_count() - 1) / 8);
+    bitfield.resize(utils::ceil_div(piece_manager.get_piece_count(), 8uz));
 
     // Resize the receive buffer to the max size of a payload received at once
 

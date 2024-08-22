@@ -2,6 +2,7 @@
 
 #include "Bencode.hpp"
 #include "PeerInfo.hpp"
+#include "Utils.hpp"
 
 #include <bit>
 #include <cpr/cpr.h>
@@ -39,9 +40,7 @@ std::optional<std::vector<torrent::PeerInfo>> extract_peers(
         std::ranges::copy(peer | std::views::drop(4), reinterpret_cast<uint8_t*>(&port));
 
         // if the system is little endian, reverse the order of the bytes
-        if constexpr (std::endian::native == std::endian::little) {
-            port = std::byteswap(port);
-        }
+        port = torrent::utils::host_to_network_order(port);
 
         peer_list.emplace_back(std::format("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3]), port);
     }

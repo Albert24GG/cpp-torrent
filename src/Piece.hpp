@@ -2,6 +2,7 @@
 
 #include "Duration.hpp"
 #include "PieceAllocator.hpp"
+#include "Utils.hpp"
 
 #include <chrono>
 #include <cstddef>
@@ -22,7 +23,7 @@ class Piece {
             std::chrono::milliseconds       request_timeout = duration::REQUEST_TIMEOUT
         )
             : piece_size{size},
-              blocks_cnt{1 + (size - 1) / BLOCK_SIZE},
+              blocks_cnt{utils::ceil_div(size, BLOCK_SIZE)},
               blocks_left{blocks_cnt},
               block_request_timeout{request_timeout},
               piece_data(size, allocator),

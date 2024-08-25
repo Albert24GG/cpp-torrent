@@ -37,7 +37,9 @@ std::optional<std::vector<torrent::PeerInfo>> extract_peers(
         uint16_t               port{};
 
         std::ranges::copy(peer | std::views::take(4), std::ranges::begin(ip));
-        std::ranges::copy(peer | std::views::drop(4), reinterpret_cast<uint8_t*>(&port));
+        std::ranges::copy(
+            peer | std::views::drop(4) | std::views::take(2), reinterpret_cast<uint8_t*>(&port)
+        );
 
         // if the system is little endian, reverse the order of the bytes
         port = torrent::utils::host_to_network_order(port);

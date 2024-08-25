@@ -58,10 +58,18 @@ TEST_CASE("PieceManager: Single Piece", "[PieceManager]") {
         piece_data.size(), piece_data.size(), file_manager, piece_hash.get(), request_timeout
     );
 
-    static constexpr std::array<std::byte, 1> peer1_bitfield{{std::byte{0b10000000}}};
-    static constexpr std::array<std::byte, 1> peer2_bitfield{{std::byte{0b00000000}}};
-    static constexpr std::array<std::byte, 1> peer3_bitfield{{std::byte{0b10000000}}};
-    static constexpr std::array<std::byte, 1> peer4_bitfield{{std::byte{0b10000000}}};
+    static const std::vector<bool> peer1_bitfield{
+        true, false, false, false, false, false, false, false
+    };
+    static const std::vector<bool> peer2_bitfield{
+        false, false, false, false, false, false, false, false
+    };
+    static const std::vector<bool> peer3_bitfield{
+        true, false, false, false, false, false, false, false
+    };
+    static const std::vector<bool> peer4_bitfield{
+        true, false, false, false, false, false, false, false
+    };
 
     piece_manager.add_peer_bitfield(peer1_bitfield);
     piece_manager.add_peer_bitfield(peer2_bitfield);
@@ -296,11 +304,19 @@ TEST_CASE("PieceManager: Multiple Pieces", "[PieceManager]") {
         request_timeout
     );
 
-    static constexpr std::array<std::byte, 1> peer1_bitfield{{std::byte{0b11111100}}};
-    static constexpr std::array<std::byte, 1> peer2_bitfield{{std::byte{0b00000000}}};
-    static constexpr std::array<std::byte, 1> peer3_bitfield{{std::byte{0b10000100}}};
-    static constexpr std::array<std::byte, 1> peer4_bitfield{{std::byte{0b00110000}}};
-    static constexpr std::array<std::byte, 1> peer5_bitfield{{std::byte{0b01010100}}};
+    static const std::vector<bool> peer1_bitfield{true, true, true, true, true, true, false, false};
+    static const std::vector<bool> peer2_bitfield{
+        false, false, false, false, false, false, false, false
+    };
+    static const std::vector<bool> peer3_bitfield{
+        true, false, false, false, false, true, false, false
+    };
+    static const std::vector<bool> peer4_bitfield{
+        false, false, true, true, false, false, false, false
+    };
+    static const std::vector<bool> peer5_bitfield{
+        false, true, false, true, false, true, false, false
+    };
 
     piece_manager.add_peer_bitfield(peer1_bitfield);
     piece_manager.add_peer_bitfield(peer2_bitfield);

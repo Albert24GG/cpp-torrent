@@ -95,14 +95,14 @@ class PeerConnection {
         bool      peer_interested{false};
         PeerState state{PeerState::UNINITIATED};
 
-        // Buffer for the send messages
+        // Buffer for the sent messages
         std::vector<std::byte> send_buffer;
         // Buffer for the received messages
         // Initialize the buffer with the size of the handshake message, and resize it after the
         // connection is done
         std::vector<std::byte> receive_buffer{message::HANDSHAKE_MESSAGE_SIZE};
 
-        std::vector<std::byte> bitfield;
+        std::vector<bool> bitfield;
 };
 
 };  // namespace torrent::peer

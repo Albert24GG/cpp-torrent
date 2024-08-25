@@ -45,11 +45,11 @@ class PieceManager {
             std::iota(sorted_pieces.begin(), sorted_pieces.end(), 0);
         }
 
-        void add_peer_bitfield(std::span<const std::byte> bitfield) {
+        void add_peer_bitfield(const std::vector<bool>& bitfield) {
             update_pieces_availability(bitfield, +1);
         }
 
-        void remove_peer_bitfield(std::span<const std::byte> bitfield) {
+        void remove_peer_bitfield(const std::vector<bool>& bitfield) {
             update_pieces_availability(bitfield, -1);
         }
 
@@ -57,7 +57,7 @@ class PieceManager {
 
         void receive_block(uint32_t piece_index, std::span<const std::byte> block, uint32_t offset);
 
-        auto request_next_block(std::span<const std::byte> bitfield
+        auto request_next_block(const std::vector<bool>& bitfield
         ) -> std::optional<std::tuple<uint32_t, uint32_t, uint32_t>>;
 
         bool completed() const { return pieces_left == 0; }
@@ -70,7 +70,7 @@ class PieceManager {
          * @param bitfield Bitfield of the peer
          * @param sign +1 to add, -1 to remove
          */
-        void update_pieces_availability(std::span<const std::byte> bitfield, int8_t sign);
+        void update_pieces_availability(const std::vector<bool>& bitfield, int8_t sign);
 
         static uint8_t get_bit(std::span<const std::byte> bitfield, uint32_t piece_index) {
             return (static_cast<uint8_t>(bitfield[piece_index >> 3]) >> (7 - (piece_index & 7))) &

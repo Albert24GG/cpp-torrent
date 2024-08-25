@@ -10,11 +10,10 @@
 
 namespace torrent {
 
-void PieceManager::update_pieces_availability(std::span<const std::byte> bitfield, int8_t sign) {
+void PieceManager::update_pieces_availability(const std::vector<bool>& bitfield, int8_t sign) {
     for (auto piece_idx : std::views::iota(0U, pieces_cnt)) {
         // Get the bit that represents the availability of the piece
-        uint8_t avail{get_bit(bitfield, piece_idx)};
-        piece_avail[piece_idx] += sign * avail;
+        piece_avail[piece_idx] += sign * static_cast<int8_t>(bitfield[piece_idx]);
     }
     are_pieces_sorted = false;
 }
@@ -93,7 +92,7 @@ void PieceManager::receive_block(
     requested_pieces.erase(piece_index);
 }
 
-auto PieceManager::request_next_block(std::span<const std::byte> bitfield
+auto PieceManager::request_next_block(const std::vector<bool>& bitfield
 ) -> std::optional<std::tuple<uint32_t, uint32_t, uint32_t>> {
     if (pieces_left == 0) {
         spdlog::debug("No more blocks to download");
@@ -109,7 +108,7 @@ auto PieceManager::request_next_block(std::span<const std::byte> bitfield
 
     for (auto piece_idx : sorted_pieces) {
         // Skip completed pieces or pieces that the peer does not have
-        if (piece_completed[piece_idx] || get_bit(bitfield, piece_idx) == 0) {
+        if (piece_completed[piece_idx] || !bitfield[piece_idx]) {
             continue;
         }
 

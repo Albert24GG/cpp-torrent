@@ -345,13 +345,15 @@ asio::awaitable<void> PeerConnection::handle_message(message::Message msg) {
 void PeerConnection::handle_have_message(std::span<std::byte> payload) {
     uint32_t piece_index{};
     std::ranges::copy(std::span<std::byte, 4>(payload), reinterpret_cast<std::byte*>(&piece_index));
-    piece_index = utils::network_to_host_order(piece_index);
-    bitfield[piece_index >> 3] |= static_cast<std::byte>(1U << (7 - (piece_index & 7)));
+    piece_index           = utils::network_to_host_order(piece_index);
+    bitfield[piece_index] = true;
     piece_manager.add_available_piece(piece_index);
 }
 
 void PeerConnection::handle_bitfield_message(std::span<std::byte> payload) {
-    std::ranges::copy(payload | std::views::take(bitfield.size()), bitfield.begin());
+    for (auto i : std::views::iota(0U, bitfield.size())) {
+        bitfield[i] = (static_cast<uint8_t>(payload[i >> 3]) >> (7U - (i & 7U))) & 1U;
+    }
     piece_manager.add_peer_bitfield(bitfield);
 }
 
@@ -463,11 +465,14 @@ awaitable<void> PeerConnection::run() {
 
     // Resize the bitfield
 
-    bitfield.resize(utils::ceil_div(piece_manager.get_piece_count(), 8uz));
+    bitfield.resize(piece_manager.get_piece_count());
 
     // Resize the receive buffer to the max size of a payload received at once
+    // (either a piece msg or bitfield msg)
 
-    receive_buffer.resize(std::max(8 + static_cast<size_t>(BLOCK_SIZE), bitfield.size()));
+    receive_buffer.resize(
+        std::max(8 + static_cast<size_t>(BLOCK_SIZE), utils::ceil_div(bitfield.size(), 8uz))
+    );
 
     // Start the send requests and receive messages coroutines
 

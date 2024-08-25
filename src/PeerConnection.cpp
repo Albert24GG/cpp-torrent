@@ -477,5 +477,6 @@ awaitable<void> PeerConnection::run() {
     // Start the send requests and receive messages coroutines
 
     co_await (send_requests() || receive_messages());
+    piece_manager.remove_peer_bitfield(bitfield);
 }
 }  // namespace torrent::peer

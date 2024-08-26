@@ -6,9 +6,10 @@
 
 #include <chrono>
 #include <cstddef>
+#include <numeric>
 #include <optional>
+#include <ranges>
 #include <span>
-#include <unordered_map>
 #include <vector>
 
 namespace torrent {
@@ -27,7 +28,17 @@ class Piece {
               blocks_left{blocks_cnt},
               block_request_timeout{request_timeout},
               piece_data(size, allocator),
-              block_received(blocks_cnt, false) {}
+              block_request_time(
+                  blocks_cnt, std::chrono::time_point<std::chrono::steady_clock>::min()
+              ),
+              remaining_blocks(blocks_cnt),
+              block_pos_in_rem(blocks_cnt) {
+            // Fill the vectors with the indices of the blocks
+            for (auto i : std::views::iota(0U, blocks_cnt)) {
+                remaining_blocks[i] = block_pos_in_rem[i] = i;
+            }
+        }
+        // block_received(blocks_cnt, false) {}
 
         /*
          * Receive a previously requested block of data.
@@ -45,27 +56,20 @@ class Piece {
          */
         auto request_next_block() -> std::optional<std::pair<uint32_t, uint32_t>>;
 
-        bool is_complete() const { return blocks_left == 0; }
+        [[nodiscard]] bool is_complete() const { return blocks_left == 0; }
 
         std::span<const std::byte> get_data() { return piece_data; }
 
     private:
         static uint32_t get_block_index(uint32_t offset) { return offset / BLOCK_SIZE; }
 
-        auto get_block_request_time(uint32_t block_index
-        ) const -> std::optional<std::chrono::time_point<std::chrono::steady_clock>> {
-            return block_request_time.contains(block_index)
-                       ? std::make_optional(block_request_time.at(block_index))
-                       : std::nullopt;
+        [[nodiscard]] bool is_block_received(uint16_t block_index) const {
+            return block_pos_in_rem[block_index] >= blocks_left;
         }
 
-        bool is_block_timed_out(uint32_t block_index) const {
-            auto request_time = get_block_request_time(block_index);
-            return request_time
-                .transform([this](auto time) {
-                    return std::chrono::steady_clock::now() - time >= block_request_timeout;
-                })
-                .value_or(true);
+        [[nodiscard]] bool is_block_timed_out(uint16_t block_index) const {
+            return std::chrono::steady_clock::now() - block_request_timeout >
+                   block_request_time[block_index];
         }
 
         uint32_t                                               piece_size;
@@ -74,11 +78,17 @@ class Piece {
         std::chrono::milliseconds                              block_request_timeout;
         std::vector<std::byte, torrent::utils::PieceAllocator> piece_data;
 
-        // bitset to keep track of which blocks have been received
-        std::vector<bool> block_received;
-        // map to keep track of the time when a block was requested
-        std::unordered_map<uint32_t, std::chrono::time_point<std::chrono::steady_clock>>
-            block_request_time;
+        // Request time of each block
+        // Unrequested = time_point::min()
+        std::vector<std::chrono::time_point<std::chrono::steady_clock>> block_request_time;
+        // Vector containing indices of blocks that have not been received (will be moving the
+        // received blocks to the end, pointed by blocks_left)
+        // Using blocks_left as a pointer to the first received block
+        std::vector<uint16_t> remaining_blocks;
+
+        // Vector containing the position of each block index in the remaining_blocks vector
+        // E.g.: block_pos_in_rem[i] = j -> remaining_block[j] = i
+        std::vector<uint16_t> block_pos_in_rem;
 };
 
 }  // namespace torrent

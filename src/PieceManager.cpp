@@ -56,14 +56,11 @@ void PieceManager::receive_block(
     auto& piece = requested_pieces.at(piece_index);
     piece.receive_block(block, offset);
 
-    spdlog::debug("Received block at offset {} for piece {}", offset, piece_index);
-
     if (!piece.is_complete()) {
         return;
     }
 
     // Piece is complete
-    spdlog::debug("Piece {} is complete", piece_index);
 
     auto piece_data{piece.get_data()};
     auto piece_data_uint8_view{std::span<const uint8_t>(
@@ -133,12 +130,8 @@ auto PieceManager::request_next_block(const std::vector<bool>& bitfield
 
         auto [offset, block_size] = block_info.value();
 
-        spdlog::debug("Requesting block at offset {} for piece {}", offset, piece_idx);
-
         return std::make_tuple(piece_idx, offset, block_size);
     }
-
-    spdlog::debug("No available block to request for specified bitfield");
 
     return std::nullopt;
 }

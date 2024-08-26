@@ -59,7 +59,7 @@ auto PeerConnection::send_data(std::span<const std::byte> buffer
     auto [e, n] = co_await asio::async_write(socket, asio::buffer(buffer), use_nothrow_awaitable);
 
     if (e) {
-        spdlog::error(
+        spdlog::debug(
             "Failed to send data to {}:{} with error:\n{}",
             peer_info.ip,
             peer_info.port,
@@ -67,7 +67,6 @@ auto PeerConnection::send_data(std::span<const std::byte> buffer
         );
         co_return std::unexpected(e);
     }
-    spdlog::debug("Sent {} bytes of data to peer {}:{}", n, peer_info.ip, peer_info.port);
 
     co_return std::expected<void, std::error_code>{};
 }
@@ -95,7 +94,7 @@ auto PeerConnection::receive_data(std::span<std::byte> buffer
     auto [e, n] = co_await asio::async_read(socket, asio::buffer(buffer), use_nothrow_awaitable);
 
     if (e) {
-        spdlog::error(
+        spdlog::debug(
             "Failed to receive data from {}:{} with error:\n{}",
             peer_info.ip,
             peer_info.port,
@@ -103,7 +102,6 @@ auto PeerConnection::receive_data(std::span<std::byte> buffer
         );
         co_return std::unexpected(e);
     }
-    spdlog::debug("Received {} bytes of data from peer {}:{}", n, peer_info.ip, peer_info.port);
 
     co_return std::expected<void, std::error_code>{};
 }
@@ -315,7 +313,6 @@ awaitable<void> PeerConnection::receive_messages() {
 
 asio::awaitable<void> PeerConnection::handle_message(message::Message msg) {
     using message::MessageType;
-    spdlog::debug("Received message with id: {}", static_cast<uint8_t>(msg.id));
     switch (msg.id) {
         case MessageType::CHOKE:
             peer_choking = true;
@@ -478,5 +475,6 @@ awaitable<void> PeerConnection::run() {
 
     co_await (send_requests() || receive_messages());
     piece_manager.remove_peer_bitfield(bitfield);
+    spdlog::debug("Peer {}:{} stopped running", peer_info.ip, peer_info.port);
 }
 }  // namespace torrent::peer

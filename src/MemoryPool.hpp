@@ -22,8 +22,22 @@ class MemoryPool {
               pool(aligned_block_size * block_count),
               next_free_block{pool.data()} {};
 
-        void* allocate();
-        void  deallocate(void* ptr);
+        /**
+         * Allocate a block of memory of size n
+         *
+         * @param size The size of the block to allocate. The size must be less than or equal to the
+         * block size of the pool, otherwise the allocation will fail
+         * @return A pointer to the allocated memory or nullptr if the allocation failed
+         */
+        void* allocate(size_t size);
+
+        /**
+         * Deallocate a block of memory
+         *
+         * @param ptr A pointer to the memory block to deallocate, previously allocated with
+         * allocate method
+         */
+        void deallocate(void* ptr);
 
     private:
         std::byte* addr_from_index(size_t index) {

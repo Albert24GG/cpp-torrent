@@ -2,8 +2,8 @@
 
 #include "Duration.hpp"
 #include "FileManager.hpp"
+#include "FixedSizeAllocator.hpp"
 #include "Piece.hpp"
-#include "PieceAllocator.hpp"
 #include "Utils.hpp"
 
 #include <chrono>
@@ -36,7 +36,7 @@ class PieceManager {
               block_request_timeout{request_timeout},
               pieces_left{pieces_cnt},
               file_manager{std::move(file_manager)},
-              allocator(piece_size, max_active_requests),
+              piece_data_alloc(piece_size, max_active_requests),
               piece_completed(pieces_cnt, false),
               piece_avail(pieces_cnt),
               piece_hashes{piece_hashes},
@@ -89,7 +89,9 @@ class PieceManager {
         std::vector<uint16_t>               piece_avail;
         std::unordered_map<uint32_t, Piece> requested_pieces;
         std::span<const uint8_t>            piece_hashes;
-        utils::PieceAllocator               allocator;
+
+        // Allocator used for the piece data
+        utils::FixedSizeAllocator<std::byte> piece_data_alloc;
 
         // Vector of indices of pieces sorted by availability
         std::vector<uint32_t> sorted_pieces;

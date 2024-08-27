@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Duration.hpp"
-#include "PieceAllocator.hpp"
+#include "FixedSizeAllocator.hpp"
 #include "Utils.hpp"
 
 #include <chrono>
@@ -19,15 +19,15 @@ static constexpr uint32_t BLOCK_SIZE{1ULL << 14U};
 class Piece {
     public:
         Piece(
-            uint32_t                        size,
-            torrent::utils::PieceAllocator& allocator,
-            std::chrono::milliseconds       request_timeout = duration::REQUEST_TIMEOUT
+            uint32_t                                       size,
+            torrent::utils::FixedSizeAllocator<std::byte>& piece_data_alloc,
+            std::chrono::milliseconds request_timeout = duration::REQUEST_TIMEOUT
         )
             : piece_size{size},
               blocks_cnt{utils::ceil_div(size, BLOCK_SIZE)},
               blocks_left{blocks_cnt},
               block_request_timeout{request_timeout},
-              piece_data(size, allocator),
+              piece_data(size, piece_data_alloc),
               block_request_time(
                   blocks_cnt, std::chrono::time_point<std::chrono::steady_clock>::min()
               ),
@@ -72,11 +72,11 @@ class Piece {
                    block_request_time[block_index];
         }
 
-        uint32_t                                               piece_size;
-        size_t                                                 blocks_cnt;
-        size_t                                                 blocks_left;
-        std::chrono::milliseconds                              block_request_timeout;
-        std::vector<std::byte, torrent::utils::PieceAllocator> piece_data;
+        uint32_t                                                              piece_size;
+        size_t                                                                blocks_cnt;
+        size_t                                                                blocks_left;
+        std::chrono::milliseconds                                             block_request_timeout;
+        std::vector<std::byte, torrent::utils::FixedSizeAllocator<std::byte>> piece_data;
 
         // Request time of each block
         // Unrequested = time_point::min()

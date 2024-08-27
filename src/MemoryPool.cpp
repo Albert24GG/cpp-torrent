@@ -3,7 +3,11 @@
 #include <cstddef>
 
 namespace torrent::utils {
-void* MemoryPool::allocate() {
+void* MemoryPool::allocate(size_t size) {
+    if (size > aligned_block_size) {
+        return nullptr;
+    }
+
     if (initialized_blocks < block_count) {
         size_t* ptr{reinterpret_cast<size_t*>(addr_from_index(initialized_blocks))};
         *ptr = initialized_blocks + 1;

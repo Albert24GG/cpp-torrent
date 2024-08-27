@@ -116,7 +116,8 @@ auto PieceManager::request_next_block(const std::vector<bool>& bitfield
             uint32_t cur_piece_size =
                 piece_idx == pieces_cnt - 1 ? 1 + (torrent_size - 1) % piece_size : piece_size;
             requested_pieces.emplace(
-                piece_idx, Piece(cur_piece_size, piece_data_alloc, block_request_timeout)
+                piece_idx,
+                Piece(cur_piece_size, piece_data_alloc, piece_util_alloc, block_request_timeout)
             );
         }
 

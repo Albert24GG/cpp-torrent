@@ -37,6 +37,10 @@ class PieceManager {
               pieces_left{pieces_cnt},
               file_manager{std::move(file_manager)},
               piece_data_alloc(piece_size, max_active_requests),
+              piece_util_alloc(
+                  utils::ceil_div(piece_size, BLOCK_SIZE) * sizeof(uint16_t),
+                  2 * max_active_requests
+              ),
               piece_completed(pieces_cnt, false),
               piece_avail(pieces_cnt),
               piece_hashes{piece_hashes},
@@ -92,6 +96,8 @@ class PieceManager {
 
         // Allocator used for the piece data
         utils::FixedSizeAllocator<std::byte> piece_data_alloc;
+        // Allocator used for the vectors that manage remaining blocks
+        utils::FixedSizeAllocator<uint16_t> piece_util_alloc;
 
         // Vector of indices of pieces sorted by availability
         std::vector<uint32_t> sorted_pieces;

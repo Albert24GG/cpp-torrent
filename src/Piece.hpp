@@ -21,6 +21,7 @@ class Piece {
         Piece(
             uint32_t                                       size,
             torrent::utils::FixedSizeAllocator<std::byte>& piece_data_alloc,
+            torrent::utils::FixedSizeAllocator<uint16_t>&  piece_util_alloc,
             std::chrono::milliseconds request_timeout = duration::REQUEST_TIMEOUT
         )
             : piece_size{size},
@@ -31,8 +32,8 @@ class Piece {
               block_request_time(
                   blocks_cnt, std::chrono::time_point<std::chrono::steady_clock>::min()
               ),
-              remaining_blocks(blocks_cnt),
-              block_pos_in_rem(blocks_cnt) {
+              remaining_blocks(blocks_cnt, piece_util_alloc),
+              block_pos_in_rem(blocks_cnt, piece_util_alloc) {
             // Fill the vectors with the indices of the blocks
             for (auto i : std::views::iota(0U, blocks_cnt)) {
                 remaining_blocks[i] = block_pos_in_rem[i] = i;
@@ -84,11 +85,11 @@ class Piece {
         // Vector containing indices of blocks that have not been received (will be moving the
         // received blocks to the end, pointed by blocks_left)
         // Using blocks_left as a pointer to the first received block
-        std::vector<uint16_t> remaining_blocks;
+        std::vector<uint16_t, utils::FixedSizeAllocator<uint16_t>> remaining_blocks;
 
         // Vector containing the position of each block index in the remaining_blocks vector
         // E.g.: block_pos_in_rem[i] = j -> remaining_block[j] = i
-        std::vector<uint16_t> block_pos_in_rem;
+        std::vector<uint16_t, utils::FixedSizeAllocator<uint16_t>> block_pos_in_rem;
 };
 
 }  // namespace torrent

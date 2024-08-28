@@ -1,13 +1,12 @@
 #include "PeerManager.hpp"
 
 #include "Duration.hpp"
+#include "Logger.hpp"
 #include "PeerConnection.hpp"
 
 #include <asio.hpp>
 #include <asio/experimental/as_tuple.hpp>
 #include <exception>
-#include <spdlog/fmt/bin_to_hex.h>
-#include <spdlog/spdlog.h>
 #include <thread>
 
 using asio::awaitable;
@@ -53,8 +52,7 @@ void PeerManager::add_peers(std::span<PeerInfo> peers) {
                     try {
                         std::rethrow_exception(ep);
                     } catch (const std::exception& ep) {
-                        // spdlog::error("Failed to connect to peer: {}", ep.what());
-                        spdlog::error(
+                        LOG_ERROR(
                             "Failed to connect to peer {}:{} with error:\n{}",
                             peer.ip,
                             peer.port,
@@ -66,7 +64,7 @@ void PeerManager::add_peers(std::span<PeerInfo> peers) {
                 }
 
                 if (--remaining_connections == 0) {
-                    spdlog::info("All peer connections established");
+                    LOG_INFO("All peer connections established");
                     init_work_guard.reset();
                     peer_init_ctx.stop();
                 }
@@ -110,7 +108,7 @@ awaitable<void> PeerManager::handle_download_completion() {
         co_await timer.async_wait(use_nothrow_awaitable);
     }
 
-    spdlog::info("Download completed. Stopping the PeerManager");
+    LOG_INFO("Download completed. Stopping the PeerManager");
     stop();
 }
 
@@ -131,7 +129,7 @@ awaitable<void> PeerManager::cleanup_peer_connections() {
 
         for (auto it = peer_connections.begin(); it != peer_connections.end();) {
             if (it->second.get_state() == peer::PeerState::DISCONNECTED) {
-                spdlog::debug(
+                LOG_DEBUG(
                     "Removed peer {}:{} from the peer connections", it->first.ip, it->first.port
                 );
                 it = peer_connections.erase(it);

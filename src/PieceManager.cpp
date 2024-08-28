@@ -1,12 +1,12 @@
 #include "PieceManager.hpp"
 
 #include "Crypto.hpp"
+#include "Logger.hpp"
 
 #include <algorithm>
 #include <cstdint>
 #include <ranges>
 #include <span>
-#include <spdlog/spdlog.h>
 
 namespace torrent {
 
@@ -74,7 +74,7 @@ void PieceManager::receive_block(
     if (hash != ref_hash) {
         // If hashes mismatch, mark piecd as incomplete
         piece_completed[piece_index] = false;
-        spdlog::warn("Piece {} hash mismatch. Discarding...", piece_index);
+        LOG_WARN("Piece {} hash mismatch. Discarding...", piece_index);
     } else {
         // If hashes match, write the piece to disk
         auto piece_data_char_view{std::span<const char>(
@@ -92,7 +92,7 @@ void PieceManager::receive_block(
 auto PieceManager::request_next_block(const std::vector<bool>& bitfield
 ) -> std::optional<std::tuple<uint32_t, uint32_t, uint32_t>> {
     if (pieces_left == 0) {
-        spdlog::debug("No more blocks to download");
+        LOG_DEBUG("No more blocks to download");
         return std::nullopt;
     }
 

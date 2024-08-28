@@ -2,6 +2,7 @@
 
 #include "Crypto.hpp"
 #include "Duration.hpp"
+#include "Logger.hpp"
 #include "TorrentMessage.hpp"
 #include "Utils.hpp"
 
@@ -12,7 +13,6 @@
 #include <expected>
 #include <ranges>
 #include <span>
-#include <spdlog/spdlog.h>
 #include <variant>
 
 using asio::awaitable;
@@ -45,7 +45,7 @@ awaitable<std::expected<void, std::error_code>> watchdog(
         now = std::chrono::steady_clock::now();
     }
 
-    spdlog::debug("Watchdog timer expired");
+    LOG_DEBUG("Watchdog timer expired");
     co_return std::unexpected(asio::error::timed_out);
 }
 
@@ -59,7 +59,7 @@ auto PeerConnection::send_data(std::span<const std::byte> buffer
     auto [e, n] = co_await asio::async_write(socket, asio::buffer(buffer), use_nothrow_awaitable);
 
     if (e) {
-        spdlog::debug(
+        LOG_DEBUG(
             "Failed to send data to {}:{} with error:\n{}",
             peer_info.ip,
             peer_info.port,
@@ -94,7 +94,7 @@ auto PeerConnection::receive_data(std::span<std::byte> buffer
     auto [e, n] = co_await asio::async_read(socket, asio::buffer(buffer), use_nothrow_awaitable);
 
     if (e) {
-        spdlog::debug(
+        LOG_DEBUG(
             "Failed to receive data from {}:{} with error:\n{}",
             peer_info.ip,
             peer_info.port,
@@ -125,7 +125,7 @@ auto PeerConnection::receive_data_with_timeout(
 
 auto PeerConnection::receive_handshake()
     -> awaitable<std::expected<crypto::Sha1, std::error_code>> {
-    spdlog::debug("Waiting for handshake message from peer {}:{}", peer_info.ip, peer_info.port);
+    LOG_DEBUG("Waiting for handshake message from peer {}:{}", peer_info.ip, peer_info.port);
 
     // Receive the handshake message
     auto handshake_result = co_await receive_data_with_timeout(
@@ -151,7 +151,7 @@ auto PeerConnection::receive_handshake()
 
 auto PeerConnection::send_handshake(const message::HandshakeMessage& handshake_message
 ) -> awaitable<std::expected<void, std::error_code>> {
-    spdlog::debug("Sending handshake message to peer {}:{}", peer_info.ip, peer_info.port);
+    LOG_DEBUG("Sending handshake message to peer {}:{}", peer_info.ip, peer_info.port);
 
     auto res = co_await send_data_with_timeout(handshake_message, duration::HANDSHAKE_TIMEOUT);
 
@@ -159,7 +159,7 @@ auto PeerConnection::send_handshake(const message::HandshakeMessage& handshake_m
 }
 
 auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std::error_code>> {
-    spdlog::debug("Establishing connection with peer {}:{}", peer_info.ip, peer_info.port);
+    LOG_DEBUG("Establishing connection with peer {}:{}", peer_info.ip, peer_info.port);
 
     // Resolve the peer endpoint
     tcp::endpoint peer_endpoint = *tcp::resolver(co_await this_coro::executor)
@@ -226,7 +226,7 @@ awaitable<void> PeerConnection::send_requests() {
             auto res = co_await send_data_with_timeout(send_buffer, duration::SEND_MSG_TIMEOUT);
 
             if (!res.has_value()) {
-                spdlog::debug(
+                LOG_DEBUG(
                     "Failed to send request message to peer {}:{} with error:\n{}",
                     peer_info.ip,
                     peer_info.port,
@@ -251,7 +251,7 @@ awaitable<void> PeerConnection::receive_messages() {
         );
 
         if (!res.has_value()) {
-            spdlog::debug(
+            LOG_DEBUG(
                 "Failed to receive message size from peer {}:{} with error:\n{}",
                 peer_info.ip,
                 peer_info.port,
@@ -276,7 +276,7 @@ awaitable<void> PeerConnection::receive_messages() {
         );
 
         if (!res.has_value()) {
-            spdlog::debug(
+            LOG_DEBUG(
                 "Failed to receive message id from peer {}:{} with error:\n{}",
                 peer_info.ip,
                 peer_info.port,
@@ -295,7 +295,7 @@ awaitable<void> PeerConnection::receive_messages() {
                 co_await receive_data_with_timeout(payload.value(), duration::RECEIVE_MSG_TIMEOUT);
 
             if (!res.has_value()) {
-                spdlog::debug(
+                LOG_DEBUG(
                     "Failed to receive message payload from peer {}:{} with error:\n{}",
                     peer_info.ip,
                     peer_info.port,
@@ -372,7 +372,7 @@ awaitable<void> PeerConnection::connect(
     // Connect to the peer
 
     if (auto res = co_await establish_connection(); !res.has_value()) {
-        spdlog::debug(
+        LOG_DEBUG(
             "Failed to connect to peer {}:{} with error:\n{}",
             peer_info.ip,
             peer_info.port,
@@ -388,7 +388,7 @@ awaitable<void> PeerConnection::connect(
     // Send the handshake message
 
     if (auto res = co_await send_handshake(handshake_message); !res.has_value()) {
-        spdlog::debug(
+        LOG_DEBUG(
             "Failed to send handshake message to peer {}:{} with error:\n{}",
             peer_info.ip,
             peer_info.port,
@@ -404,7 +404,7 @@ awaitable<void> PeerConnection::connect(
     // Receive the handshake message
 
     if (auto res = co_await receive_handshake(); !res.has_value()) {
-        spdlog::debug(
+        LOG_DEBUG(
             "Failed to receive handshake message from peer {}:{} with error:\n{}",
             peer_info.ip,
             peer_info.port,
@@ -416,7 +416,7 @@ awaitable<void> PeerConnection::connect(
         state = PeerState::DISCONNECTED;
         co_return;
     } else if (res.value() != info_hash) {
-        spdlog::debug(
+        LOG_DEBUG(
             "Received invalid handshake message from peer {}:{}", peer_info.ip, peer_info.port
         );
         state = PeerState::DISCONNECTED;
@@ -425,7 +425,7 @@ awaitable<void> PeerConnection::connect(
 
     // Set the state to connected
     state = PeerState::CONNECTED;
-    spdlog::debug("Successfully connected to peer {}:{}", peer_info.ip, peer_info.port);
+    LOG_DEBUG("Successfully connected to peer {}:{}", peer_info.ip, peer_info.port);
 
     co_return;
 
@@ -443,7 +443,7 @@ awaitable<void> PeerConnection::run() {
 
     if (auto res = co_await send_data_with_timeout(interested_message, duration::SEND_MSG_TIMEOUT);
         !res.has_value()) {
-        spdlog::debug(
+        LOG_DEBUG(
             "Failed to send interested message to peer {}:{} with error:\n{}",
             peer_info.ip,
             peer_info.port,
@@ -475,6 +475,6 @@ awaitable<void> PeerConnection::run() {
 
     co_await (send_requests() || receive_messages());
     piece_manager.remove_peer_bitfield(bitfield);
-    spdlog::debug("Peer {}:{} stopped running", peer_info.ip, peer_info.port);
+    LOG_DEBUG("Peer {}:{} stopped running", peer_info.ip, peer_info.port);
 }
 }  // namespace torrent::peer

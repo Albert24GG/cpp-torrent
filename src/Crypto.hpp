@@ -7,7 +7,7 @@
 
 namespace torrent::crypto {
 
-static constexpr auto SHA1_SIZE = 20;
+inline constexpr auto SHA1_SIZE = 20;
 
 class Sha1 {
     public:

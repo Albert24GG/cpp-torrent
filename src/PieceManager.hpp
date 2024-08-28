@@ -18,7 +18,7 @@
 
 namespace torrent {
 
-static constexpr size_t MAX_MEMPOOL_SIZE{1ULL << 29U};  // 512MB
+inline constexpr size_t MAX_MEMPOOL_SIZE{1ULL << 29U};  // 512MB
 
 class PieceManager {
     public:

@@ -14,7 +14,7 @@
 
 namespace torrent {
 
-static constexpr uint32_t BLOCK_SIZE{1ULL << 14U};
+inline constexpr uint32_t BLOCK_SIZE{1ULL << 14U};
 
 class Piece {
     public:

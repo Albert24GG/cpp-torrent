@@ -14,7 +14,7 @@ using BencodeString = std::string;
 using BencodeList   = std::vector<BencodeItem>;
 using BencodeDict   = std::unordered_map<std::string, BencodeItem>;
 
-static constexpr BencodeInt MAX_STRING_LEN{1ULL << 27U};  // 128 MiB
+inline constexpr BencodeInt MAX_STRING_LEN{1ULL << 27U};  // 128 MiB
 
 class BencodeItem : public std::variant<BencodeInt, BencodeString, BencodeList, BencodeDict> {
     public:

@@ -129,7 +129,7 @@ auto PieceManager::request_next_block(const std::vector<bool>& bitfield
             continue;
         }
 
-        auto [offset, block_size] = block_info.value();
+        auto [offset, block_size] = *block_info;
 
         return std::make_tuple(piece_idx, offset, block_size);
     }

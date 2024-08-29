@@ -145,7 +145,7 @@ auto PeerConnection::receive_handshake()
         !info_hash.has_value()) {
         co_return std::unexpected(std::error_code{});
     } else {
-        co_return info_hash.value();
+        co_return *info_hash;
     }
 }
 
@@ -201,7 +201,7 @@ void PeerConnection::load_block_requests() {
             break;
         }
 
-        auto [piece_index, block_offset, block_size] = request.value();
+        auto [piece_index, block_offset, block_size] = *request;
         send_buffer.insert(send_buffer.end(), 17, std::byte{0});
 
         message::create_request_message(
@@ -291,8 +291,7 @@ awaitable<void> PeerConnection::receive_messages() {
         if (message_size > 1) {
             payload = std::span<std::byte>(receive_buffer).subspan(0, message_size - 1);
 
-            res =
-                co_await receive_data_with_timeout(payload.value(), duration::RECEIVE_MSG_TIMEOUT);
+            res = co_await receive_data_with_timeout(*payload, duration::RECEIVE_MSG_TIMEOUT);
 
             if (!res.has_value()) {
                 LOG_DEBUG(
@@ -325,15 +324,15 @@ asio::awaitable<void> PeerConnection::handle_message(message::Message msg) {
         case MessageType::NOT_INTERESTED:
             break;
         case MessageType::HAVE:
-            handle_have_message(msg.payload.value());
+            handle_have_message(*msg.payload);
             break;
         case MessageType::BITFIELD:
-            handle_bitfield_message(msg.payload.value());
+            handle_bitfield_message(*msg.payload);
             break;
         case MessageType::REQUEST:
             break;
         case MessageType::PIECE:
-            handle_piece_message(msg.payload.value());
+            handle_piece_message(*msg.payload);
             break;
     }
     co_return;
@@ -359,7 +358,7 @@ void PeerConnection::handle_piece_message(std::span<std::byte> payload) {
     if (!parsed_message.has_value()) {
         return;
     }
-    auto [piece_index, block_data, block_offset] = parsed_message.value();
+    auto [piece_index, block_data, block_offset] = *parsed_message;
     piece_manager.receive_block(piece_index, block_data, block_offset);
 }
 
@@ -415,7 +414,7 @@ awaitable<void> PeerConnection::connect(
         //     PeerState::DISCONNECTED;
         state = PeerState::DISCONNECTED;
         co_return;
-    } else if (res.value() != info_hash) {
+    } else if (*res != info_hash) {
         LOG_DEBUG(
             "Received invalid handshake message from peer {}:{}", peer_info.ip, peer_info.port
         );

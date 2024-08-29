@@ -83,7 +83,7 @@ TEST_CASE("PieceManager: Single Piece", "[PieceManager]") {
         {
             REQUIRE(block.has_value());
 
-            auto [index, offset, length] = block.value();
+            auto [index, offset, length] = *block;
             REQUIRE(index == 0);
             REQUIRE(offset == 0);
             REQUIRE(length == BLOCK_SIZE);
@@ -112,7 +112,7 @@ TEST_CASE("PieceManager: Single Piece", "[PieceManager]") {
 
             REQUIRE(block.has_value());
 
-            auto [index, offset, length] = block.value();
+            auto [index, offset, length] = *block;
             REQUIRE(index == 0);
             REQUIRE(offset == 0);
             REQUIRE(length == BLOCK_SIZE);
@@ -335,7 +335,7 @@ TEST_CASE("PieceManager: Multiple Pieces", "[PieceManager]") {
         {
             REQUIRE(block.has_value());
 
-            auto [index, offset, length] = block.value();
+            auto [index, offset, length] = *block;
             REQUIRE(index == 4);
             REQUIRE(offset == 0);
             REQUIRE(length == BLOCK_SIZE);
@@ -366,7 +366,7 @@ TEST_CASE("PieceManager: Multiple Pieces", "[PieceManager]") {
 
             REQUIRE(block.has_value());
 
-            auto [index, offset, length] = block.value();
+            auto [index, offset, length] = *block;
             REQUIRE(index == 2);
             REQUIRE(offset == BLOCK_SIZE);
             REQUIRE(length == BLOCK_SIZE);
@@ -383,7 +383,7 @@ TEST_CASE("PieceManager: Multiple Pieces", "[PieceManager]") {
 
             REQUIRE(block.has_value());
 
-            auto [index, offset, length] = block.value();
+            auto [index, offset, length] = *block;
             REQUIRE(index == 5);
             REQUIRE(offset == 0);
             REQUIRE(length == BLOCK_SIZE);

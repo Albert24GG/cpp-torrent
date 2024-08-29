@@ -144,7 +144,7 @@ void serialize_message(const Message& msg, std::span<std::byte> buffer) {
     // Copy the payload to the buffer
 
     if (msg.payload.has_value()) {
-        std::ranges::copy(msg.payload.value(), std::begin(buffer | std::views::drop(5)));
+        std::ranges::copy(*msg.payload, std::begin(buffer | std::views::drop(5)));
     }
 }
 

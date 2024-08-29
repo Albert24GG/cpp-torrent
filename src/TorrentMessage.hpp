@@ -10,13 +10,13 @@
 
 namespace torrent::message {
 
-constexpr std::string_view PROTOCOL_IDENTIFIER{"BitTorrent protocol"};
-constexpr auto             HANDSHAKE_MESSAGE_SIZE   = 68;
-constexpr auto             PROTOCOL_IDENTIFIER_SIZE = 19;
-constexpr auto             RESERVED_SIZE            = 8;
-constexpr auto             INFO_HASH_SIZE           = crypto::SHA1_SIZE;
-constexpr auto             PEER_ID_SIZE             = 20;
-constexpr auto             MAX_SENT_MSG_SIZE        = 17;
+inline constexpr std::string_view PROTOCOL_IDENTIFIER{"BitTorrent protocol"};
+inline constexpr auto             HANDSHAKE_MESSAGE_SIZE   = 68;
+inline constexpr auto             PROTOCOL_IDENTIFIER_SIZE = 19;
+inline constexpr auto             RESERVED_SIZE            = 8;
+inline constexpr auto             INFO_HASH_SIZE           = crypto::SHA1_SIZE;
+inline constexpr auto             PEER_ID_SIZE             = 20;
+inline constexpr auto             MAX_SENT_MSG_SIZE        = 17;
 
 using HandshakeMessage = std::array<std::byte, HANDSHAKE_MESSAGE_SIZE>;
 

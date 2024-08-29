@@ -14,7 +14,7 @@
 namespace torrent::peer {
 
 // Max blocks that can be requested from a peer at a time
-constexpr auto MAX_BLOCKS_IN_FLIGHT = 5;
+inline constexpr auto MAX_BLOCKS_IN_FLIGHT = 5;
 
 enum class PeerState : uint8_t {
     UNINITIATED,
@@ -84,6 +84,7 @@ class PeerConnection {
         asio::ip::tcp::socket socket;
         PieceManager&         piece_manager;
         PeerInfo              peer_info;
+        uint8_t               retries_left{};
 
         // client is choking the peer
         bool am_choking{true};

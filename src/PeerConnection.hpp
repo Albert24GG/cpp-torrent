@@ -14,7 +14,8 @@
 namespace torrent::peer {
 
 // Max blocks that can be requested from a peer at a time
-inline constexpr auto MAX_BLOCKS_IN_FLIGHT = 5;
+inline constexpr auto    MAX_BLOCKS_IN_FLIGHT{5};
+inline constexpr uint8_t MAX_RETRIES{5};
 
 enum class PeerState : uint8_t {
     UNINITIATED,
@@ -48,6 +49,16 @@ class PeerConnection {
         asio::awaitable<void> run();
 
         [[nodiscard]] PeerState get_state() const { return state; }
+
+        [[nodiscard]] uint8_t get_retries_left() const { return retries_left; }
+
+        /**
+         * @brief Disconnect the peer connection
+         */
+        void disconnect() {
+            state = PeerState::DISCONNECTED;
+            socket.close();
+        }
 
     private:
         auto send_data(std::span<const std::byte> buffer
@@ -84,7 +95,7 @@ class PeerConnection {
         asio::ip::tcp::socket socket;
         PieceManager&         piece_manager;
         PeerInfo              peer_info;
-        uint8_t               retries_left{};
+        uint8_t               retries_left{MAX_RETRIES};
 
         // client is choking the peer
         bool am_choking{true};

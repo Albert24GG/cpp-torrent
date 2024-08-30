@@ -49,6 +49,10 @@ class PeerManager {
     private:
         asio::awaitable<void> handle_download_completion();
 
+        asio::awaitable<void> try_reconnection(
+            const PeerInfo& peer_info, peer::PeerConnection& peer
+        );
+
         asio::awaitable<void> cleanup_peer_connections();
 
         asio::io_context                                           peer_conn_ctx;

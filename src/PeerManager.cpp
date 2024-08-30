@@ -112,6 +112,28 @@ awaitable<void> PeerManager::handle_download_completion() {
     stop();
 }
 
+asio::awaitable<void> PeerManager::try_reconnection(
+    const PeerInfo& peer_info, peer::PeerConnection& peer
+) {
+    LOG_DEBUG("Trying to reconnect to peer {}:{}", peer_info.ip, peer_info.port);
+
+    while (peer.get_state() != peer::PeerState::CONNECTED && peer.get_retries_left() > 0) {
+        co_await peer.connect(handshake_message, info_hash);
+    }
+
+    if (peer.get_state() != peer::PeerState::CONNECTED) {
+        LOG_ERROR(
+            "Failed to reconnect to peer {}:{}. Removing the peer connection",
+            peer_info.ip,
+            peer_info.port
+        );
+        peer.disconnect();
+    } else {
+        co_spawn(peer_conn_ctx, peer.run(), asio::detached);
+    }
+    co_return;
+}
+
 awaitable<void> PeerManager::cleanup_peer_connections() {
     // Acquire the lock to protect the peer_connections map
     asio::steady_timer timer(co_await this_coro::executor);
@@ -128,13 +150,20 @@ awaitable<void> PeerManager::cleanup_peer_connections() {
         }
 
         for (auto it = peer_connections.begin(); it != peer_connections.end();) {
-            if (it->second.get_state() == peer::PeerState::DISCONNECTED) {
-                LOG_DEBUG(
-                    "Removed peer {}:{} from the peer connections", it->first.ip, it->first.port
-                );
-                it = peer_connections.erase(it);
-            } else {
-                ++it;
+            switch (it->second.get_state()) {
+                case peer::PeerState::DISCONNECTED:
+                    LOG_DEBUG(
+                        "Removed peer {}:{} from the peer connections", it->first.ip, it->first.port
+                    );
+                    it = peer_connections.erase(it);
+                    break;
+                case peer::PeerState::TIMED_OUT:
+                    co_spawn(
+                        peer_conn_ctx, try_reconnection(it->first, it->second), asio::detached
+                    );
+                    break;
+                default:
+                    ++it;
             }
         }
     }

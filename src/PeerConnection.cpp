@@ -222,19 +222,21 @@ awaitable<void> PeerConnection::send_requests() {
         }
         load_block_requests();
 
-        if (!send_buffer.empty()) {
-            auto res = co_await send_data_with_timeout(send_buffer, duration::SEND_MSG_TIMEOUT);
+        if (send_buffer.empty()) {
+            continue;
+        }
 
-            if (!res.has_value()) {
-                LOG_DEBUG(
-                    "Failed to send request message to peer {}:{} with error:\n{}",
-                    peer_info.ip,
-                    peer_info.port,
-                    res.error().message()
-                );
-                state = PeerState::DISCONNECTED;
-                co_return;
-            }
+        if (auto res = co_await send_data_with_timeout(send_buffer, duration::SEND_MSG_TIMEOUT);
+            !res.has_value()) {
+            LOG_DEBUG(
+                "Failed to send request message to peer {}:{} with error:\n{}",
+                peer_info.ip,
+                peer_info.port,
+                res.error().message()
+            );
+            state = res.error() == asio::error::timed_out ? PeerState::TIMED_OUT
+                                                          : PeerState::DISCONNECTED;
+            co_return;
         }
     }
     co_return;
@@ -257,7 +259,8 @@ awaitable<void> PeerConnection::receive_messages() {
                 peer_info.port,
                 res.error().message()
             );
-            state = PeerState::DISCONNECTED;
+            state = res.error() == asio::error::timed_out ? PeerState::TIMED_OUT
+                                                          : PeerState::DISCONNECTED;
             co_return;
         }
 
@@ -282,7 +285,8 @@ awaitable<void> PeerConnection::receive_messages() {
                 peer_info.port,
                 res.error().message()
             );
-            state = PeerState::DISCONNECTED;
+            state = res.error() == asio::error::timed_out ? PeerState::TIMED_OUT
+                                                          : PeerState::DISCONNECTED;
             co_return;
         }
 
@@ -291,16 +295,16 @@ awaitable<void> PeerConnection::receive_messages() {
         if (message_size > 1) {
             payload = std::span<std::byte>(receive_buffer).subspan(0, message_size - 1);
 
-            res = co_await receive_data_with_timeout(*payload, duration::RECEIVE_MSG_TIMEOUT);
-
-            if (!res.has_value()) {
+            if (res = co_await receive_data_with_timeout(*payload, duration::RECEIVE_MSG_TIMEOUT);
+                !res.has_value()) {
                 LOG_DEBUG(
                     "Failed to receive message payload from peer {}:{} with error:\n{}",
                     peer_info.ip,
                     peer_info.port,
                     res.error().message()
                 );
-                state = PeerState::DISCONNECTED;
+                state = res.error() == asio::error::timed_out ? PeerState::TIMED_OUT
+                                                              : PeerState::DISCONNECTED;
                 co_return;
             }
         }
@@ -365,6 +369,12 @@ void PeerConnection::handle_piece_message(std::span<std::byte> payload) {
 awaitable<void> PeerConnection::connect(
     const message::HandshakeMessage& handshake_message, const crypto::Sha1& info_hash
 ) {
+    // Manage the retries
+    if (retries_left == 0) {
+        co_return;
+    }
+    --retries_left;
+
     // Set the state to connecting
     state = PeerState::CONNECTING;
 
@@ -377,10 +387,8 @@ awaitable<void> PeerConnection::connect(
             peer_info.port,
             res.error().message()
         );
-        // state =
-        //     res.error() == asio::error::timed_out ? PeerState::TIMED_OUT :
-        //     PeerState::DISCONNECTED;
-        state = PeerState::DISCONNECTED;
+        state =
+            res.error() == asio::error::timed_out ? PeerState::TIMED_OUT : PeerState::DISCONNECTED;
         co_return;
     }
 
@@ -393,10 +401,8 @@ awaitable<void> PeerConnection::connect(
             peer_info.port,
             res.error().message()
         );
-        // state =
-        //     res.error() == asio::error::timed_out ? PeerState::TIMED_OUT :
-        //     PeerState::DISCONNECTED;
-        state = PeerState::DISCONNECTED;
+        state =
+            res.error() == asio::error::timed_out ? PeerState::TIMED_OUT : PeerState::DISCONNECTED;
         co_return;
     }
 
@@ -409,10 +415,8 @@ awaitable<void> PeerConnection::connect(
             peer_info.port,
             res.error().message()
         );
-        // state =
-        //     res.error() == asio::error::timed_out ? PeerState::TIMED_OUT :
-        //     PeerState::DISCONNECTED;
-        state = PeerState::DISCONNECTED;
+        state =
+            res.error() == asio::error::timed_out ? PeerState::TIMED_OUT : PeerState::DISCONNECTED;
         co_return;
     } else if (*res != info_hash) {
         LOG_DEBUG(
@@ -448,10 +452,8 @@ awaitable<void> PeerConnection::run() {
             peer_info.port,
             res.error().message()
         );
-        // state =
-        //     res.error() == asio::error::timed_out ? PeerState::TIMED_OUT :
-        //     PeerState::DISCONNECTED;
-        state = PeerState::DISCONNECTED;
+        state =
+            res.error() == asio::error::timed_out ? PeerState::TIMED_OUT : PeerState::DISCONNECTED;
         co_return;
     }
 

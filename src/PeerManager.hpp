@@ -60,14 +60,18 @@ class PeerManager {
             asio::make_work_guard(peer_conn_ctx)
         };
 
+        asio::io_context                                           utils_ctx;
+        asio::executor_work_guard<asio::io_context::executor_type> utils_work_guard{
+            asio::make_work_guard(utils_ctx)
+        };
+
         // Mutex to protect the peer_connections map from concurrent access (adding peers + cleanup)
         std::mutex peer_connections_mutex;
 
-        // Use a thread pool to initiate the peer connections
-        asio::thread_pool conn_init_thread_pool{1};
-
         // Run the peer connection context in a separate thread
         std::jthread peer_connection_thread;
+        // Run the utility context in a separate thread
+        std::jthread utils_thread;
 
         std::unordered_map<PeerInfo, peer::PeerConnection> peer_connections;
         std::shared_ptr<PieceManager>                      piece_manager;

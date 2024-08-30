@@ -22,16 +22,7 @@ void PeerManager::add_peers(std::span<PeerInfo> peers) {
     // Start the PeerManager if it hasn't been started yet
     start();
 
-    // Create the context for initiating the peer connections
-    asio::io_context peer_init_ctx;
-
-    auto                                                       remaining_connections{peers.size()};
-    asio::executor_work_guard<asio::io_context::executor_type> init_work_guard{
-        asio::make_work_guard(peer_init_ctx)
-    };
-
-    // Use a thread pool to initiate the peer connections
-    asio::post(conn_init_thread_pool, [&peer_init_ctx] { peer_init_ctx.run(); });
+    auto remaining_connections{peers.size()};
 
     // Acquire the lock to protect the peer_connections map
     std::scoped_lock lock(peer_connections_mutex);
@@ -45,7 +36,7 @@ void PeerManager::add_peers(std::span<PeerInfo> peers) {
         peer_connections.emplace(peer, peer::PeerConnection(peer_conn_ctx, *piece_manager, peer));
 
         co_spawn(
-            peer_init_ctx,
+            utils_ctx,
             peer_connections.at(peer).connect(handshake_message, info_hash),
             [&](std::exception_ptr ep) {
                 if (ep) {
@@ -65,14 +56,10 @@ void PeerManager::add_peers(std::span<PeerInfo> peers) {
 
                 if (--remaining_connections == 0) {
                     LOG_INFO("All peer connections established");
-                    init_work_guard.reset();
-                    peer_init_ctx.stop();
                 }
             }
         );
     }
-
-    conn_init_thread_pool.join();
 }
 
 void PeerManager::start() {
@@ -81,10 +68,12 @@ void PeerManager::start() {
     }
     // Run the peer connection context
     peer_connection_thread = std::jthread([this] { peer_conn_ctx.run(); });
+    // Run the utility context
+    utils_thread = std::jthread([this] { utils_ctx.run(); });
     // Start the cleanup task
-    co_spawn(peer_conn_ctx, cleanup_peer_connections(), asio::detached);
+    co_spawn(utils_ctx, cleanup_peer_connections(), asio::detached);
     // Start the download completion task
-    co_spawn(peer_conn_ctx, handle_download_completion(), asio::detached);
+    co_spawn(utils_ctx, handle_download_completion(), asio::detached);
 
     started = true;
 }
@@ -93,10 +82,12 @@ void PeerManager::stop() {
     if (!started) {
         return;
     }
-    // Reset the work guard to stop the peer connection context
+    // Reset the work guards
     peer_conn_work_guard.reset();
-    // Stop the peer connection context
+    utils_work_guard.reset();
+    // Stop the contexts
     peer_conn_ctx.stop();
+    utils_ctx.stop();
     started = false;
 }
 
@@ -129,19 +120,16 @@ asio::awaitable<void> PeerManager::try_reconnection(
         );
         peer.disconnect();
     } else {
-        co_spawn(peer_conn_ctx, peer.run(), asio::detached);
+        co_spawn(co_await this_coro::executor, peer.run(), asio::detached);
     }
     co_return;
 }
 
 awaitable<void> PeerManager::cleanup_peer_connections() {
-    // Acquire the lock to protect the peer_connections map
-    asio::steady_timer timer(co_await this_coro::executor);
-
     // TODO: Change the condition to a stop flag
     while (true) {
-        timer.expires_after(duration::PEER_CLEANUP_INTERVAL);
-        co_await timer.async_wait(use_nothrow_awaitable);
+        co_await asio::steady_timer(co_await this_coro::executor, duration::PEER_CLEANUP_INTERVAL)
+            .async_wait(use_nothrow_awaitable);
 
         // Try to acquire the lock without blocking the thread
         std::unique_lock lock(peer_connections_mutex, std::try_to_lock);
@@ -158,8 +146,12 @@ awaitable<void> PeerManager::cleanup_peer_connections() {
                     it = peer_connections.erase(it);
                     break;
                 case peer::PeerState::TIMED_OUT:
+                    // TODO: Maybe implement exponential backoff
+                    // TODO: Prevent 2 reconnection attempts at the same time
                     co_spawn(
-                        peer_conn_ctx, try_reconnection(it->first, it->second), asio::detached
+                        co_await this_coro::executor,
+                        try_reconnection(it->first, it->second),
+                        asio::detached
                     );
                     break;
                 default:

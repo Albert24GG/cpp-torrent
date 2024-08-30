@@ -86,6 +86,7 @@ class PeerConnection {
         asio::awaitable<void> send_requests();
         asio::awaitable<void> receive_messages();
         asio::awaitable<void> handle_message(message::Message msg);
+        asio::awaitable<void> handle_failure(std::error_code ec);
 
         void handle_have_message(std::span<std::byte> payload);
         void handle_bitfield_message(std::span<std::byte> payload);

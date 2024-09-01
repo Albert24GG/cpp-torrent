@@ -61,20 +61,6 @@ class PeerConnection {
         }
 
     private:
-        auto send_data(std::span<const std::byte> buffer
-        ) -> asio::awaitable<std::expected<void, std::error_code>>;
-
-        auto send_data_with_timeout(
-            std::span<const std::byte> buffer, std::chrono::milliseconds timeout
-        ) -> asio::awaitable<std::expected<void, std::error_code>>;
-
-        auto receive_data(std::span<std::byte> buffer
-        ) -> asio::awaitable<std::expected<void, std::error_code>>;
-
-        auto receive_data_with_timeout(
-            std::span<std::byte> buffer, std::chrono::milliseconds timeout
-        ) -> asio::awaitable<std::expected<void, std::error_code>>;
-
         auto receive_handshake() -> asio::awaitable<std::expected<crypto::Sha1, std::error_code>>;
 
         auto send_handshake(const message::HandshakeMessage& handshake_message

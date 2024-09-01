@@ -24,111 +24,15 @@ using namespace asio::experimental::awaitable_operators;
 // Use the nothrow awaitable completion token to avoid exceptions
 constexpr auto use_nothrow_awaitable = asio::experimental::as_tuple(use_awaitable);
 
-namespace {
-
-// A visitor to use with std::visit on a variant
-template <typename... Callable>
-struct visitor : Callable... {
-        using Callable::operator()...;
-};
-
-awaitable<std::expected<void, std::error_code>> watchdog(
-    asio::chrono::steady_clock::time_point& deadline
-) {
-    asio::steady_timer timer{co_await this_coro::executor};
-
-    auto now = std::chrono::steady_clock::now();
-
-    while (deadline > now) {
-        timer.expires_at(deadline);
-        co_await timer.async_wait(use_nothrow_awaitable);
-        now = std::chrono::steady_clock::now();
-    }
-
-    LOG_DEBUG("Watchdog timer expired");
-    co_return std::unexpected(asio::error::timed_out);
-}
-
-}  // namespace
-
 namespace torrent::peer {
-
-auto PeerConnection::send_data(std::span<const std::byte> buffer
-) -> awaitable<std::expected<void, std::error_code>> {
-    // Send the data
-    auto [e, n] = co_await asio::async_write(socket, asio::buffer(buffer), use_nothrow_awaitable);
-
-    if (e) {
-        LOG_DEBUG(
-            "Failed to send data to {}:{} with error:\n{}",
-            peer_info.ip,
-            peer_info.port,
-            e.message()
-        );
-        co_return std::unexpected(e);
-    }
-
-    co_return std::expected<void, std::error_code>{};
-}
-
-auto PeerConnection::send_data_with_timeout(
-    std::span<const std::byte> buffer, std::chrono::milliseconds timeout
-) -> asio::awaitable<std::expected<void, std::error_code>> {
-    std::chrono::steady_clock::time_point deadline{std::chrono::steady_clock::now() + timeout};
-
-    auto result = co_await (send_data(buffer) || watchdog(deadline));
-    std::expected<void, std::error_code> return_res;
-
-    std::visit(
-        visitor{[&return_res](const std::expected<void, std::error_code>& res) { return_res = res; }
-        },
-        result
-    );
-
-    co_return return_res;
-}
-
-auto PeerConnection::receive_data(std::span<std::byte> buffer
-) -> awaitable<std::expected<void, std::error_code>> {
-    // Receive the data
-    auto [e, n] = co_await asio::async_read(socket, asio::buffer(buffer), use_nothrow_awaitable);
-
-    if (e) {
-        LOG_DEBUG(
-            "Failed to receive data from {}:{} with error:\n{}",
-            peer_info.ip,
-            peer_info.port,
-            e.message()
-        );
-        co_return std::unexpected(e);
-    }
-
-    co_return std::expected<void, std::error_code>{};
-}
-
-auto PeerConnection::receive_data_with_timeout(
-    std::span<std::byte> buffer, std::chrono::milliseconds timeout
-) -> asio::awaitable<std::expected<void, std::error_code>> {
-    std::chrono::steady_clock::time_point deadline{std::chrono::steady_clock::now() + timeout};
-
-    auto result = co_await (receive_data(buffer) || watchdog(deadline));
-    std::expected<void, std::error_code> return_res;
-
-    std::visit(
-        visitor{[&return_res](const std::expected<void, std::error_code>& res) { return_res = res; }
-        },
-        result
-    );
-
-    co_return return_res;
-}
 
 auto PeerConnection::receive_handshake()
     -> awaitable<std::expected<crypto::Sha1, std::error_code>> {
     LOG_DEBUG("Waiting for handshake message from peer {}:{}", peer_info.ip, peer_info.port);
 
     // Receive the handshake message
-    auto handshake_result = co_await receive_data_with_timeout(
+    auto handshake_result = co_await utils::tcp::receive_data_with_timeout(
+        socket,
         std::span<std::byte, message::HANDSHAKE_MESSAGE_SIZE>(receive_buffer),
         duration::HANDSHAKE_TIMEOUT
     );
@@ -153,7 +57,9 @@ auto PeerConnection::send_handshake(const message::HandshakeMessage& handshake_m
 ) -> awaitable<std::expected<void, std::error_code>> {
     LOG_DEBUG("Sending handshake message to peer {}:{}", peer_info.ip, peer_info.port);
 
-    auto res = co_await send_data_with_timeout(handshake_message, duration::HANDSHAKE_TIMEOUT);
+    auto res = co_await utils::tcp::send_data_with_timeout(
+        socket, handshake_message, duration::HANDSHAKE_TIMEOUT
+    );
 
     co_return res;
 }
@@ -169,13 +75,14 @@ auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std
         std::chrono::steady_clock::now() + duration::CONNECTION_TIMEOUT
     };
 
-    auto result =
-        co_await (socket.async_connect(peer_endpoint, use_nothrow_awaitable) || watchdog(deadline));
+    auto result = co_await (
+        socket.async_connect(peer_endpoint, use_nothrow_awaitable) || utils::watchdog(deadline)
+    );
 
     std::expected<void, std::error_code> connection_result;
 
     std::visit(
-        visitor{
+        utils::visitor{
             [&connection_result](const std::expected<void, std::error_code>& res) {
                 connection_result = res;
             },
@@ -226,7 +133,9 @@ awaitable<void> PeerConnection::send_requests() {
             continue;
         }
 
-        if (auto res = co_await send_data_with_timeout(send_buffer, duration::SEND_MSG_TIMEOUT);
+        if (auto res = co_await utils::tcp::send_data_with_timeout(
+                socket, send_buffer, duration::SEND_MSG_TIMEOUT
+            );
             !res.has_value()) {
             LOG_DEBUG(
                 "Failed to send request message to peer {}:{} with error:\n{}",
@@ -246,7 +155,8 @@ awaitable<void> PeerConnection::receive_messages() {
         uint32_t message_size{};
 
         std::expected<void, std::error_code> res;
-        res = co_await receive_data_with_timeout(
+        res = co_await utils::tcp::receive_data_with_timeout(
+            socket,
             std::span<std::byte>(reinterpret_cast<std::byte*>(&message_size), 4),
             duration::RECEIVE_MSG_TIMEOUT
         );
@@ -272,8 +182,8 @@ awaitable<void> PeerConnection::receive_messages() {
 
         std::byte id{};
 
-        res = co_await receive_data_with_timeout(
-            std::span<std::byte>(&id, 1), duration::RECEIVE_MSG_TIMEOUT
+        res = co_await utils::tcp::receive_data_with_timeout(
+            socket, std::span<std::byte>(&id, 1), duration::RECEIVE_MSG_TIMEOUT
         );
 
         if (!res.has_value()) {
@@ -292,7 +202,9 @@ awaitable<void> PeerConnection::receive_messages() {
         if (message_size > 1) {
             payload = std::span<std::byte>(receive_buffer).subspan(0, message_size - 1);
 
-            if (res = co_await receive_data_with_timeout(*payload, duration::RECEIVE_MSG_TIMEOUT);
+            if (res = co_await utils::tcp::receive_data_with_timeout(
+                    socket, *payload, duration::RECEIVE_MSG_TIMEOUT
+                );
                 !res.has_value()) {
                 LOG_DEBUG(
                     "Failed to receive message payload from peer {}:{} with error:\n{}",
@@ -445,7 +357,9 @@ awaitable<void> PeerConnection::run() {
     std::span<std::byte, 5> interested_message(send_buffer);
     message::create_interested_message(interested_message);
 
-    if (auto res = co_await send_data_with_timeout(interested_message, duration::SEND_MSG_TIMEOUT);
+    if (auto res = co_await utils::tcp::send_data_with_timeout(
+            socket, interested_message, duration::SEND_MSG_TIMEOUT
+        );
         !res.has_value()) {
         LOG_DEBUG(
             "Failed to send interested message to peer {}:{} with error:\n{}",

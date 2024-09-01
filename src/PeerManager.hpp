@@ -14,6 +14,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 
 namespace torrent {
 
@@ -50,7 +51,7 @@ class PeerManager {
         asio::awaitable<void> handle_download_completion();
 
         asio::awaitable<void> try_reconnection(
-            const PeerInfo& peer_info, peer::PeerConnection& peer
+            const PeerInfo& peer_info, peer::PeerConnection& peer, bool& is_reconnecting
         );
 
         asio::awaitable<void> cleanup_peer_connections();
@@ -73,11 +74,13 @@ class PeerManager {
         // Run the utility context in a separate thread
         std::jthread utils_thread;
 
-        std::unordered_map<PeerInfo, peer::PeerConnection> peer_connections;
-        std::shared_ptr<PieceManager>                      piece_manager;
-        message::HandshakeMessage                          handshake_message;
-        crypto::Sha1                                       info_hash;
-        bool                                               started{false};
+        // Map of peer connections
+        // the bool value indicates whether the peer is currently being reconnected
+        std::unordered_map<PeerInfo, std::pair<peer::PeerConnection, bool>> peer_connections;
+        std::shared_ptr<PieceManager>                                       piece_manager;
+        message::HandshakeMessage                                           handshake_message;
+        crypto::Sha1                                                        info_hash;
+        bool                                                                started{false};
 };
 
 };  // namespace torrent

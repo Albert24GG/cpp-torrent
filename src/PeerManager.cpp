@@ -33,11 +33,16 @@ void PeerManager::add_peers(std::span<PeerInfo> peers) {
             continue;
         }
 
-        peer_connections.emplace(peer, peer::PeerConnection(peer_conn_ctx, *piece_manager, peer));
+        // Initially, none of the peers are reconnecting, so set the second element to false
+        peer_connections.emplace(
+            peer, std::make_pair(peer::PeerConnection(peer_conn_ctx, *piece_manager, peer), false)
+        );
+
+        auto& peer_connection = peer_connections.at(peer).first;
 
         co_spawn(
             utils_ctx,
-            peer_connections.at(peer).connect(handshake_message, info_hash),
+            peer_connection.connect(handshake_message, info_hash),
             [&](std::exception_ptr ep) {
                 if (ep) {
                     try {
@@ -50,8 +55,8 @@ void PeerManager::add_peers(std::span<PeerInfo> peers) {
                             ep.what()
                         );
                     }
-                } else if (peer_connections.at(peer).get_state() == peer::PeerState::CONNECTED) {
-                    co_spawn(peer_conn_ctx, peer_connections.at(peer).run(), asio::detached);
+                } else if (peer_connection.get_state() == peer::PeerState::CONNECTED) {
+                    co_spawn(peer_conn_ctx, peer_connection.run(), asio::detached);
                 }
 
                 if (--remaining_connections == 0) {
@@ -104,7 +109,7 @@ awaitable<void> PeerManager::handle_download_completion() {
 }
 
 asio::awaitable<void> PeerManager::try_reconnection(
-    const PeerInfo& peer_info, peer::PeerConnection& peer
+    const PeerInfo& peer_info, peer::PeerConnection& peer, bool& is_reconnecting
 ) {
     LOG_DEBUG("Trying to reconnect to peer {}:{}", peer_info.ip, peer_info.port);
 
@@ -122,6 +127,8 @@ asio::awaitable<void> PeerManager::try_reconnection(
     } else {
         co_spawn(co_await this_coro::executor, peer.run(), asio::detached);
     }
+
+    is_reconnecting = false;
     co_return;
 }
 
@@ -138,7 +145,15 @@ awaitable<void> PeerManager::cleanup_peer_connections() {
         }
 
         for (auto it = peer_connections.begin(); it != peer_connections.end();) {
-            switch (it->second.get_state()) {
+            auto& [peer_connection, is_reconnecting] = it->second;
+
+            // Skip the peer if it's currently being reconnected
+            if (is_reconnecting) {
+                ++it;
+                continue;
+            }
+
+            switch (peer_connection.get_state()) {
                 case peer::PeerState::DISCONNECTED:
                     LOG_DEBUG(
                         "Removed peer {}:{} from the peer connections", it->first.ip, it->first.port
@@ -147,10 +162,10 @@ awaitable<void> PeerManager::cleanup_peer_connections() {
                     break;
                 case peer::PeerState::TIMED_OUT:
                     // TODO: Maybe implement exponential backoff
-                    // TODO: Prevent 2 reconnection attempts at the same time
+                    is_reconnecting = true;
                     co_spawn(
                         co_await this_coro::executor,
-                        try_reconnection(it->first, it->second),
+                        try_reconnection(it->first, peer_connection, is_reconnecting),
                         asio::detached
                     );
                     break;

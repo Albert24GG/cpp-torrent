@@ -96,10 +96,14 @@ namespace tcp {
      *
      * @param socket  the socket to send the data to
      * @param buffer  the data to send
+     * @param bytes_sent reference to a variable to store the number of bytes sent
      * @return the result of the operation: void if successful, error code otherwise
      */
-    auto send_data(asio::ip::tcp::socket& socket, std::span<const std::byte> buffer)
-        -> asio::awaitable<std::expected<void, std::error_code>>;
+    auto send_data(
+        asio::ip::tcp::socket&                        socket,
+        std::span<const std::byte>                    buffer,
+        std::optional<std::reference_wrapper<size_t>> bytes_sent = std::nullopt
+    ) -> asio::awaitable<std::expected<void, std::error_code>>;
 
     /**
      * Send the given data to the socket with a timeout
@@ -107,13 +111,15 @@ namespace tcp {
      * @param socket  the socket to send the data to
      * @param buffer  the data to send
      * @param timeout the timeout for the operation
+     * @param bytes_sent reference to a variable to store the number of bytes sent
      * @return the result of the operation: void if successful, error code if the operation
      * failed or timed out
      */
     auto send_data_with_timeout(
-        asio::ip::tcp::socket&     socket,
-        std::span<const std::byte> buffer,
-        std::chrono::milliseconds  timeout
+        asio::ip::tcp::socket&                        socket,
+        std::span<const std::byte>                    buffer,
+        std::chrono::milliseconds                     timeout,
+        std::optional<std::reference_wrapper<size_t>> bytes_sent = std::nullopt
     ) -> asio::awaitable<std::expected<void, std::error_code>>;
 
     /**
@@ -121,10 +127,14 @@ namespace tcp {
      *
      * @param socket  the socket to receive the data from
      * @param buffer  the buffer to store the received data
+     * @param bytes_received reference to a variable to store the number of bytes received
      * @return the result of the operation: void if successful, error code otherwise
      */
-    auto receive_data(asio::ip::tcp::socket& socket, std::span<std::byte> buffer)
-        -> asio::awaitable<std::expected<void, std::error_code>>;
+    auto receive_data(
+        asio::ip::tcp::socket&                        socket,
+        std::span<std::byte>                          buffer,
+        std::optional<std::reference_wrapper<size_t>> bytes_received = std::nullopt
+    ) -> asio::awaitable<std::expected<void, std::error_code>>;
 
     /**
      * Receive data from the socket with a timeout
@@ -132,13 +142,15 @@ namespace tcp {
      * @param socket  the socket to receive the data from
      * @param buffer  the buffer to store the received data
      * @param timeout the timeout for the operation
+     * @param bytes_received reference to a variable to store the number of bytes received
      * @return the result of the operation: void if successful, error code if the operation
      * failed or timed out
      */
     auto receive_data_with_timeout(
-        asio::ip::tcp::socket&    socket,
-        std::span<std::byte>      buffer,
-        std::chrono::milliseconds timeout
+        asio::ip::tcp::socket&                        socket,
+        std::span<std::byte>                          buffer,
+        std::chrono::milliseconds                     timeout,
+        std::optional<std::reference_wrapper<size_t>> bytes_received = std::nullopt
     ) -> asio::awaitable<std::expected<void, std::error_code>>;
 
 }  // namespace tcp

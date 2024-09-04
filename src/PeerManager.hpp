@@ -41,19 +41,49 @@ class PeerManager {
 
         ~PeerManager() { stop(); }
 
+        /**
+         * @brief Start the peer manager
+         */
         void start();
 
+        /**
+         * @brief Stop the peer manager
+         */
         void stop();
 
+        /**
+         * @brief Add peers to the peer manager
+         *
+         * @param peers The peers to add
+         * @note Peers that cannot be connected will be dropped.
+         */
         void add_peers(std::span<PeerInfo> peers);
 
     private:
+        /**
+         * @brief Handler to automatically stop the manager when download is completed
+         */
         asio::awaitable<void> handle_download_completion();
 
+        /**
+         * @brief Try to reconnect to a peer
+         *
+         * @param peer_info The peer info
+         * @param peer The peer connection
+         * @param is_reconnecting A reference to a boolean that will be set to true if the peer is
+         *                        currently being reconnected
+         */
         asio::awaitable<void> try_reconnection(
             const PeerInfo& peer_info, peer::PeerConnection& peer, bool& is_reconnecting
         );
 
+        /**
+         * @brief Cleanup the peer connections
+         * This function will remove all the peer connections that have the state set to
+         * DISCONNECTED and will try to reconnect to the peers that have the state set to TIMED_OUT
+         *
+         * @note This function will run as long as the peer manager is running
+         */
         asio::awaitable<void> cleanup_peer_connections();
 
         asio::io_context                                           peer_conn_ctx;

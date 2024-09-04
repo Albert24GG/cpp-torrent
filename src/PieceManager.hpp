@@ -49,37 +49,71 @@ class PieceManager {
             std::iota(sorted_pieces.begin(), sorted_pieces.end(), 0);
         }
 
+        /**
+         * @brief Add a peer bitfield
+         *
+         * @param bitfield Bitfield of the peer
+         */
         void add_peer_bitfield(const std::vector<bool>& bitfield) {
             update_pieces_availability(bitfield, +1);
         }
 
+        /**
+         * @brief Remove a peer bitfield
+         *
+         * @param bitfield Bitfield of the peer
+         */
         void remove_peer_bitfield(const std::vector<bool>& bitfield) {
             update_pieces_availability(bitfield, -1);
         }
 
+        /**
+         * @brief Add a piece to the list of available pieces
+         *
+         * @param piece_index Index of the piece
+         */
         void add_available_piece(uint32_t piece_index);
 
+        /**
+         * @brief Receive a requested block
+         *
+         * @param piece_index Index of the piece
+         * @param block Block data
+         * @param offset Offset of the block in the piece
+         */
         void receive_block(uint32_t piece_index, std::span<const std::byte> block, uint32_t offset);
 
+        /**
+         * @brief Request the next block to download
+         *
+         * @param bitfield Bitfield of the peer
+         * @return Index of the piece, offset of the block in the piece, size of the block
+         */
         auto request_next_block(const std::vector<bool>& bitfield
         ) -> std::optional<std::tuple<uint32_t, uint32_t, uint32_t>>;
 
+        /**
+         * @brief Check if the all the pieces have been downloaded
+         *
+         * @return True if the torrent is completed
+         */
         bool completed() const { return pieces_left == 0; }
 
+        /**
+         * @brief Get the number of pieces in the torrent
+         *
+         * @return Number of pieces
+         */
         size_t get_piece_count() const { return pieces_cnt; }
 
     private:
         /**
-         * Update the availability of pieces
+         * @brief Update the availability of pieces
+         *
          * @param bitfield Bitfield of the peer
          * @param sign +1 to add, -1 to remove
          */
         void update_pieces_availability(const std::vector<bool>& bitfield, int8_t sign);
-
-        static uint8_t get_bit(std::span<const std::byte> bitfield, uint32_t piece_index) {
-            return (static_cast<uint8_t>(bitfield[piece_index >> 3]) >> (7 - (piece_index & 7))) &
-                   1U;
-        }
 
         size_t                           max_active_requests;
         uint32_t                         piece_size;

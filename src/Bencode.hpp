@@ -33,7 +33,18 @@ class BencodeItem : public std::variant<BencodeInt, BencodeString, BencodeList, 
         BencodeItem& operator=(BencodeItem&& item)      = default;
         ~BencodeItem()                                  = default;
 
+        /**
+         * @brief Get the start offset of the bencoded item in the bencoded string
+         *
+         * @return The start offset
+         */
         [[nodiscard]] size_t start() const { return start_off; }
+
+        /**
+         * @brief Get the length of the bencoded item in the bencoded string
+         *
+         * @return The length
+         */
         [[nodiscard]] size_t len() const { return elem_len; }
 
     private:

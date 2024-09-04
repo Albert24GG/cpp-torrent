@@ -22,7 +22,20 @@ struct TorrentMetadata {
         crypto::Sha1          info_hash;
 };
 
+/**
+ * @brief Parse the given torrent file
+ *
+ * @param torrent_istream  the input stream of the torrent file
+ * @return the parsed torrent metadata
+ */
 TorrentMetadata parse_torrent_file(std::istream& torrent_istream);
+
+/**
+ * @brief Parse the given torrent file
+ *
+ * @param torrent_str  the string representation of the torrent file
+ * @return the parsed torrent metadata
+ */
 TorrentMetadata parse_torrent_file(const std::string& torrent_str);
 
 }  // namespace torrent::md

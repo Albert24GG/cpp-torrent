@@ -23,7 +23,7 @@ class MemoryPool {
               next_free_block{pool.data()} {};
 
         /**
-         * Allocate a block of memory of size n
+         * @brief Allocate a block of memory of size n
          *
          * @param size The size of the block to allocate. The size must be less than or equal to the
          * block size of the pool, otherwise the allocation will fail
@@ -32,7 +32,7 @@ class MemoryPool {
         void* allocate(size_t size);
 
         /**
-         * Deallocate a block of memory
+         * @brief Deallocate a block of memory
          *
          * @param ptr A pointer to the memory block to deallocate, previously allocated with
          * allocate method
@@ -40,10 +40,24 @@ class MemoryPool {
         void deallocate(void* ptr);
 
     private:
+        /**
+         * @brief Get the address of the block at the given index
+         *
+         * @param index The index of the block
+         * @return The address of the block
+         * @note No bounds checking is performed
+         */
         std::byte* addr_from_index(size_t index) {
             return pool.data() + index * aligned_block_size;
         }
 
+        /**
+         * @brief Get the index of the block at the given address
+         *
+         * @param addr The address of the block
+         * @return The index of the block
+         * @note No bounds checking is performed
+         */
         size_t index_from_addr(std::byte* addr) {
             return (addr - pool.data()) / aligned_block_size;
         }

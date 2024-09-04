@@ -35,11 +35,21 @@ class Tracker {
             }
         }
 
+        /**
+         * @brief Retrieves a list of peers from the tracker
+         *
+         * @param downloaded The number of bytes downloaded
+         * @param uploaded The number of bytes uploaded
+         * @return A list of peers if the request was successful, an empty optional otherwise
+         */
         std::optional<std::vector<PeerInfo>> retrieve_peers(size_t downloaded, size_t uploaded = 0);
 
-        void wait_interval() const { std::this_thread::sleep_for(this->interval); }
-
     private:
+        /**
+         * @brief Update the interval using the value in the response dictionary
+         *
+         * @param response_dict The response dictionary
+         */
         void update_interval(const Bencode::BencodeDict& response_dict);
 
         std::string          announce;

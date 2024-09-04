@@ -16,7 +16,7 @@ namespace err {
 /**
  * @brief Throw an exception with trace
  *
- * @tparam Error The type of the exception
+ * @param Error The type of the exception
  * @param msg The error message
  */
 template <typename Error = std::runtime_error>

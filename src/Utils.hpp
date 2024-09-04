@@ -14,7 +14,7 @@
 namespace torrent::utils {
 
 /**
- * Convert the given value to big endian
+ * @brief Convert the given value to big endian
  *
  * @param value  the value to convert
  * @return the value in big endian
@@ -28,7 +28,7 @@ constexpr auto host_to_network_order(auto value) {
 }
 
 /**
- * Convert the given value to host endian
+ * @brief Convert the given value to host endian
  *
  * @param value  the value to convert
  * @return the value in host endian
@@ -38,7 +38,7 @@ constexpr auto network_to_host_order(auto value) {
 }
 
 /**
- * Calculate the ceiling of the division of the given integers
+ * @brief Calculate the ceiling of the division of the given integers
  *
  * @param divident the divident
  * @param divisor  the divisor
@@ -49,7 +49,7 @@ constexpr auto ceil_div(std::integral auto divident, std::integral auto divisor)
 }
 
 /**
- * Calculate the next aligned value of the given value
+ * @brief Calculate the next aligned value of the given value
  *
  * @param value      the value to align
  * @param alignment  the alignment
@@ -73,14 +73,16 @@ constexpr auto generate_random(
     return dist(gen);
 }
 
-/** A visitor to use with std::visit on a variant */
+/**
+ * @brief A visitor to use with std::visit on a variant
+ */
 template <typename... Callable>
 struct visitor : Callable... {
         using Callable::operator()...;
 };
 
 /**
- * Create a timer to watch for the given deadline
+ * @brief Create a timer to watch for the given deadline
  * This function is intended to be used in conjuntion with the awaitable operators
  *
  * @param deadline  the deadline to watch for
@@ -92,7 +94,7 @@ auto watchdog(asio::chrono::steady_clock::time_point& deadline
 namespace tcp {
 
     /**
-     * Send the given data to the socket
+     * @brief Send the given data to the socket
      *
      * @param socket  the socket to send the data to
      * @param buffer  the data to send
@@ -106,7 +108,7 @@ namespace tcp {
     ) -> asio::awaitable<std::expected<void, std::error_code>>;
 
     /**
-     * Send the given data to the socket with a timeout
+     * @brief Send the given data to the socket with a timeout
      *
      * @param socket  the socket to send the data to
      * @param buffer  the data to send
@@ -123,7 +125,7 @@ namespace tcp {
     ) -> asio::awaitable<std::expected<void, std::error_code>>;
 
     /**
-     * Receive data from the socket
+     * @brief Receive data from the socket
      *
      * @param socket  the socket to receive the data from
      * @param buffer  the buffer to store the received data
@@ -137,7 +139,7 @@ namespace tcp {
     ) -> asio::awaitable<std::expected<void, std::error_code>>;
 
     /**
-     * Receive data from the socket with a timeout
+     * @brief Receive data from the socket with a timeout
      *
      * @param socket  the socket to receive the data from
      * @param buffer  the buffer to store the received data
@@ -158,7 +160,7 @@ namespace tcp {
 namespace udp {
 
     /**
-     * Send the given data to the socket
+     * @brief Send the given data to the socket
      *
      * @param socket    the socket to be used for sending the data
      * @param buffer    the data to send
@@ -174,7 +176,7 @@ namespace udp {
     ) -> asio::awaitable<std::expected<void, std::error_code>>;
 
     /**
-     * Send the given data to the socket with a timeout
+     * @brief Send the given data to the socket with a timeout
      *
      * @param socket    the socket to be used for sending the data
      * @param buffer    the data to send
@@ -193,7 +195,7 @@ namespace udp {
     ) -> asio::awaitable<std::expected<void, std::error_code>>;
 
     /**
-     * Receive data from the socket
+     * @brief Receive data from the socket
      *
      * @param socket    the socket to be used for receiving the data
      * @param buffer    the buffer to store the received data
@@ -209,7 +211,7 @@ namespace udp {
     ) -> asio::awaitable<std::expected<void, std::error_code>>;
 
     /**
-     * Receive data from the socket with a timeout
+     * @brief Receive data from the socket with a timeout
      *
      * @param socket    the socket to be used for receiving the data
      * @param buffer    the buffer to store the received data

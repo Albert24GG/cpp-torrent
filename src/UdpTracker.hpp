@@ -37,7 +37,7 @@ class UdpTracker {
         }
 
         /**
-         * Retrieves a list of peers from the tracker
+         * @brief Retrieves a list of peers from the tracker
          *
          * @param downloaded The number of bytes downloaded
          * @param uploaded The number of bytes uploaded
@@ -48,7 +48,7 @@ class UdpTracker {
 
     private:
         /**
-         * Extracts the host and port from the URL
+         * @brief Extracts the host and port from the URL
          *
          * @param url The URL to extract the host and port from
          * @return A pair containing the host and port
@@ -56,7 +56,7 @@ class UdpTracker {
         auto extract_url_info(const std::string& url) -> std::pair<std::string, uint16_t>;
 
         /**
-         * Sends a connect request to the tracker
+         * @brief Sends a connect request to the tracker
          *
          * @param socket The socket to send the request from
          * @param tracker_endpoint The endpoint of the tracker
@@ -67,7 +67,7 @@ class UdpTracker {
         ) -> asio::awaitable<std::expected<uint64_t, std::error_code>>;
 
         /**
-         * Sends an announce request to the tracker
+         * @brief Sends an announce request to the tracker
          *
          * @param socket The socket to send the request from
          * @param tracker_endpoint The endpoint of the tracker

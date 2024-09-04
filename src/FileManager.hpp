@@ -22,8 +22,21 @@ class FileManager {
         FileManager& operator=(FileManager&&)      = default;
         ~FileManager()                             = default;
 
+        /**
+         * @brief Write data at a given offset
+         * The correct file is found by checking the offset against the start_offset and length of
+         * each file
+         *
+         * @param data    the data to write
+         * @param offset  the offset to write the data at
+         */
         void write(std::span<const char> data, size_t offset);
 
+        /**
+         * @brief Get the total length of all the files
+         *
+         * @return the total length of all the files
+         */
         [[nodiscard]] size_t get_total_length() const;
 
     private:

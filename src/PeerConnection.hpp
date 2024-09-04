@@ -37,7 +37,7 @@ class PeerConnection {
               peer_info{std::move(peer_info)} {}
 
         /*
-         * Connect to the peer and perform the handshake.
+         * @brief Connect to the peer and perform the handshake.
          *
          * @param handshake_message the handshake message to send
          * @param info_hash         the info hash of the torrent
@@ -46,10 +46,23 @@ class PeerConnection {
             const message::HandshakeMessage& handshake_message, const crypto::Sha1& info_hash
         );
 
+        /**
+         * @brief Start sending and receiving messages from the peer
+         */
         asio::awaitable<void> run();
 
+        /**
+         * @brief Get the state of the peer connection
+         *
+         * @return The state of the peer connection
+         */
         [[nodiscard]] PeerState get_state() const { return state; }
 
+        /**
+         * @brief Get the number of retries left
+         *
+         * @return The number of retries left
+         */
         [[nodiscard]] uint8_t get_retries_left() const { return retries_left; }
 
         /**
@@ -61,21 +74,76 @@ class PeerConnection {
         }
 
     private:
+        /**
+         * @brief Receive a handshake message from the peer
+         *
+         * @return The info hash of the peer if the handshake was successful, an error code
+         * otherwise
+         */
         auto receive_handshake() -> asio::awaitable<std::expected<crypto::Sha1, std::error_code>>;
 
+        /**
+         * @brief Send a handshake message to the peer
+         *
+         * @param handshake_message the handshake message to send
+         * @return void if the handshake was successful, an error code otherwise
+         */
         auto send_handshake(const message::HandshakeMessage& handshake_message
         ) -> asio::awaitable<std::expected<void, std::error_code>>;
 
+        /**
+         * @brief Establish a connection with the peer
+         *
+         * @return void if the connection was successful, an error code otherwise
+         */
         auto establish_connection() -> asio::awaitable<std::expected<void, std::error_code>>;
 
-        void                  load_block_requests();
+        /**
+         * @brief Load the next block requests in the send_buffer
+         */
+        void load_block_requests();
+
+        /**
+         * @brief Send the next block requests to the peer
+         */
         asio::awaitable<void> send_requests();
+
+        /**
+         * @brief Receive messages from the peer
+         */
         asio::awaitable<void> receive_messages();
+
+        /**
+         * @brief Handle a message received from the peer
+         */
         asio::awaitable<void> handle_message(message::Message msg);
+
+        /**
+         * @brief Handle a failure in the connection
+         *
+         * @param ec the error code
+         */
         asio::awaitable<void> handle_failure(std::error_code ec);
 
+        /**
+         * @brief Handle a have message
+         *
+         * @param payload the payload of the message
+         */
         void handle_have_message(std::span<std::byte> payload);
+
+        /**
+         * @brief Handle a bitfield message
+         *
+         * @param payload the payload of the message
+         */
         void handle_bitfield_message(std::span<std::byte> payload);
+
+        /**
+         * @brief Handle a piece message
+         *
+         * @param payload the payload of the message
+         */
         void handle_piece_message(std::span<std::byte> payload);
 
         asio::io_context&     peer_conn_ctx;

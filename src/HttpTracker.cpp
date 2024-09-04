@@ -1,6 +1,5 @@
-#include "Tracker.hpp"
-
 #include "Bencode.hpp"
+#include "HttpTracker.hpp"
 #include "Logger.hpp"
 #include "PeerInfo.hpp"
 #include "Utils.hpp"
@@ -52,12 +51,14 @@ std::optional<std::vector<torrent::PeerInfo>> extract_peers(
 
 namespace torrent {
 
-void Tracker::update_interval(const Bencode::BencodeDict& response_dict) {
+void HttpTracker::update_interval(const Bencode::BencodeDict& response_dict) {
     this->interval =
         std::chrono::seconds(std::get<Bencode::BencodeInt>(response_dict.at("interval")));
 }
 
-std::optional<std::vector<PeerInfo>> Tracker::retrieve_peers(size_t downloaded, size_t uploaded) {
+std::optional<std::vector<PeerInfo>> HttpTracker::retrieve_peers(
+    size_t downloaded, size_t uploaded
+) {
     // convert the info hash to a string
     std::string info_hash_str{this->info_hash.get().begin(), this->info_hash.get().end()};
 

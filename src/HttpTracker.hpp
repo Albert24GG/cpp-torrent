@@ -16,9 +16,9 @@ namespace torrent {
 
 inline constexpr auto TRACKER_TIMEOUT{std::chrono::seconds(60)};
 
-class Tracker {
+class HttpTracker {
     public:
-        Tracker(
+        HttpTracker(
             std::string  announce,
             crypto::Sha1 info_hash,
             std::string  client_id,

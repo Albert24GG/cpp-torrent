@@ -1,8 +1,8 @@
 #include "Crypto.hpp"
+#include "HttpTracker.hpp"
 #include "MockHttpTracker.hpp"
 #include "MockUdpTracker.hpp"
 #include "PeerInfo.hpp"
-#include "Tracker.hpp"
 #include "UdpTracker.hpp"
 
 #include <algorithm>
@@ -39,7 +39,7 @@ TEST_CASE("Tracker: retrieve_peers", "[Tracker]") {
 
         tracker.wait_until_ready();
 
-        torrent::Tracker torrent_tracker{
+        torrent::HttpTracker torrent_tracker{
             "http://localhost:8080/announce", info_hash, client_id, client_port, torrent_size
         };
         retrieved_peers = torrent_tracker.retrieve_peers(0);

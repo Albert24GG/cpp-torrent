@@ -17,17 +17,19 @@
 namespace {
 
 inline void check_field_existance(const Bencode::BencodeDict& dict, const std::string& field) {
-    if (!dict.contains(field))
+    if (!dict.contains(field)) {
         err::throw_with_trace(std::format("Invalid torrent file: No \"{}\" field provided.", field)
         );
+    }
 }
 
-template <typename RequiredType, typename FieldType>
-inline void check_field_type(FieldType&& field, const std::string& field_name) {
-    if (std::is_same_v<RequiredType, std::decay_t<FieldType>>)
+template <typename RequiredType>
+inline void check_field_type(const Bencode::BencodeItem& field, const std::string& field_name) {
+    if (!std::holds_alternative<RequiredType>(field)) {
         err::throw_with_trace(
             std::format("Invalid torrent file: field \"{}\" holds the wrong type", field_name)
         );
+    }
 }
 
 template <typename RequiredType>
@@ -49,8 +51,7 @@ Torrent_Info_File_Entry parse_file_entry(Bencode::BencodeDict& file_entry) {
     std::filesystem::path file_path;
 
     for (auto& path : path_list) {
-        check_field_type<Bencode::BencodeString>(path, "path");
-        file_path = file_path / std::move(std::get<Bencode::BencodeString>(path));
+        file_path = file_path / std::get<Bencode::BencodeString>(path);
     }
 
     return {file_length, std::move(file_path)};
@@ -124,7 +125,7 @@ TorrentMetadata parse_torrent_file(std::istream& torrent_istream) {
     auto& torrent_dict = std::get<Bencode::BencodeDict>(torrent);
 
     check_field<Bencode::BencodeString>(torrent_dict, "announce");
-    check_field<Bencode::BencodeString>(torrent_dict, "info");
+    check_field<Bencode::BencodeDict>(torrent_dict, "info");
 
     auto& torrent_info = std::get<Bencode::BencodeDict>(torrent_dict["info"]);
 

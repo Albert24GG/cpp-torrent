@@ -2,6 +2,7 @@
 
 #include "Crypto.hpp"
 #include "Error.hpp"
+#include "ITracker.hpp"
 #include "PeerInfo.hpp"
 
 #include <asio.hpp>
@@ -16,7 +17,7 @@
 
 namespace torrent {
 
-class UdpTracker {
+class UdpTracker final : public ITracker {
     public:
         UdpTracker(
             const std::string& announce,
@@ -44,7 +45,7 @@ class UdpTracker {
          * @return A list of peers if the request was successful, an empty optional otherwise
          */
         auto retrieve_peers(size_t downloaded, size_t uploaded = 0)
-            -> std::optional<std::vector<PeerInfo>>;
+            -> std::optional<std::vector<PeerInfo>> override;
 
     private:
         /**
@@ -81,7 +82,7 @@ class UdpTracker {
         ) -> asio::awaitable<std::expected<std::vector<PeerInfo>, std::error_code>>;
 
         std::string host;
-        uint16_t    port;
+        uint16_t    port{};
 
         crypto::Sha1         info_hash;
         std::string          torr_client_id;

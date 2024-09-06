@@ -3,6 +3,7 @@
 #include "Bencode.hpp"
 #include "Crypto.hpp"
 #include "Error.hpp"
+#include "ITracker.hpp"
 #include "PeerInfo.hpp"
 
 #include <chrono>
@@ -16,7 +17,7 @@ namespace torrent {
 
 inline constexpr auto TRACKER_TIMEOUT{std::chrono::seconds(60)};
 
-class HttpTracker {
+class HttpTracker final : public ITracker {
     public:
         HttpTracker(
             std::string  announce,
@@ -42,7 +43,8 @@ class HttpTracker {
          * @param uploaded The number of bytes uploaded
          * @return A list of peers if the request was successful, an empty optional otherwise
          */
-        std::optional<std::vector<PeerInfo>> retrieve_peers(size_t downloaded, size_t uploaded = 0);
+        std::optional<std::vector<PeerInfo>> retrieve_peers(size_t downloaded, size_t uploaded = 0)
+            override;
 
     private:
         /**

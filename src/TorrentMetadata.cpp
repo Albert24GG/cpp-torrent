@@ -112,6 +112,26 @@ torrent::crypto::Sha1 get_info_hash(
     return torrent::crypto::Sha1::digest(buffer.data(), length);
 }
 
+auto parse_announce_list(Bencode::BencodeList& torrent_announce_list
+) -> std::vector<std::vector<std::string>> {
+    std::vector<std::vector<std::string>> announce_list;
+
+    for (auto& group : torrent_announce_list) {
+        check_field_type<Bencode::BencodeList>(group, "announce_group");
+
+        std::vector<std::string> group_announce_list;
+
+        for (auto& announce : std::get<Bencode::BencodeList>(group)) {
+            check_field_type<Bencode::BencodeString>(announce, "announce");
+            group_announce_list.push_back(std::get<Bencode::BencodeString>(announce));
+        }
+
+        announce_list.push_back(std::move(group_announce_list));
+    }
+
+    return announce_list;
+}
+
 }  // namespace
 
 namespace torrent::md {
@@ -119,13 +139,24 @@ namespace torrent::md {
 TorrentMetadata parse_torrent_file(std::istream& torrent_istream) {
     Bencode::BencodeItem torrent = Bencode::BDecode(torrent_istream);
 
-    if (!std::holds_alternative<Bencode::BencodeDict>(torrent))
+    if (!std::holds_alternative<Bencode::BencodeDict>(torrent)) {
         err::throw_with_trace("Invalid torrent bencode format.");
+    }
 
     auto& torrent_dict = std::get<Bencode::BencodeDict>(torrent);
 
     check_field<Bencode::BencodeString>(torrent_dict, "announce");
     check_field<Bencode::BencodeDict>(torrent_dict, "info");
+
+    auto announce_list = [&] -> std::vector<std::vector<std::string>> {
+        try {
+            check_field<Bencode::BencodeList>(torrent_dict, "announce-list");
+            return parse_announce_list(std::get<Bencode::BencodeList>(torrent_dict["announce-list"])
+            );
+        } catch (const std::exception&) {
+            return std::vector<std::vector<std::string>>{};
+        }
+    }();
 
     auto& torrent_info = std::get<Bencode::BencodeDict>(torrent_dict["info"]);
 
@@ -136,11 +167,12 @@ TorrentMetadata parse_torrent_file(std::istream& torrent_istream) {
     auto& announce = std::get<Bencode::BencodeString>(torrent_dict["announce"]);
 
     return {
-        .announce     = std::move(announce),
-        .piece_hashes = std::move(piece_hashes),
-        .piece_length = piece_length,
-        .files        = std::move(files),
-        .info_hash    = info_hash
+        .announce      = std::move(announce),
+        .announce_list = std::move(announce_list),
+        .piece_hashes  = std::move(piece_hashes),
+        .piece_length  = piece_length,
+        .files         = std::move(files),
+        .info_hash     = info_hash
     };
 }
 

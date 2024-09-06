@@ -15,11 +15,12 @@ struct FileInfo {
 };
 
 struct TorrentMetadata {
-        std::string           announce;
-        std::string           piece_hashes;
-        size_t                piece_length;
-        std::vector<FileInfo> files;
-        crypto::Sha1          info_hash;
+        std::string                           announce;
+        std::vector<std::vector<std::string>> announce_list;
+        std::string                           piece_hashes;
+        size_t                                piece_length;
+        std::vector<FileInfo>                 files;
+        crypto::Sha1                          info_hash;
 };
 
 /**

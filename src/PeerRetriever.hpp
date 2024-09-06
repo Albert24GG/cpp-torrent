@@ -5,7 +5,6 @@
 #include "ITracker.hpp"
 
 #include <algorithm>
-#include <iostream>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -22,21 +21,20 @@ class PeerRetriever {
             uint16_t                              client_port,
             size_t                                torrent_size
         )
-            : announce_list(std::move(announce_list)),
-              info_hash(info_hash),
-              client_id(std::move(client_id)),
-              client_port(client_port),
-              torrent_size(torrent_size) {
-            if (this->client_id.size() != 20) {
+            : announce_list_(std::move(announce_list)),
+              info_hash_(info_hash),
+              client_id_(std::move(client_id)),
+              client_port_(client_port),
+              torrent_size_(torrent_size) {
+            if (client_id_.size() != 20) {
                 err::throw_with_trace("Client ID must be 20 bytes long");
             }
 
             // Add the announce url to the announce list if it is not already present
-            if (this->announce_list.empty()) {
-                this->announce_list.push_back(std::vector<std::string>{std::move(announce)});
-            } else if (std::ranges::find(this->announce_list[0], announce) ==
-                       this->announce_list[0].end()) {
-                this->announce_list[0].insert(this->announce_list[0].begin(), std::move(announce));
+            if (announce_list_.empty()) {
+                announce_list_.push_back(std::vector<std::string>{std::move(announce)});
+            } else if (std::ranges::find(announce_list_[0], announce) == announce_list_[0].end()) {
+                announce_list_[0].insert(announce_list_[0].begin(), std::move(announce));
             }
         }
 
@@ -51,12 +49,12 @@ class PeerRetriever {
             -> std::optional<std::vector<PeerInfo>>;
 
     private:
-        std::unique_ptr<ITracker>             cur_tracker;
-        std::vector<std::vector<std::string>> announce_list;
-        crypto::Sha1                          info_hash;
-        std::string                           client_id;
-        uint16_t                              client_port;
-        size_t                                torrent_size;
+        std::unique_ptr<ITracker>             cur_tracker_;
+        std::vector<std::vector<std::string>> announce_list_;
+        crypto::Sha1                          info_hash_;
+        std::string                           client_id_;
+        uint16_t                              client_port_;
+        size_t                                torrent_size_;
 };
 
 }  // namespace torrent

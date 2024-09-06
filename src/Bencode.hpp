@@ -23,8 +23,8 @@ class BencodeItem : public std::variant<BencodeInt, BencodeString, BencodeList, 
             : variant<BencodeInt, BencodeString, BencodeList, BencodeDict>(
                   std::forward<T>(variant_val)
               ),
-              start_off(start_off),
-              elem_len(elem_len) {}
+              start_off_(start_off),
+              elem_len_(elem_len) {}
 
         BencodeItem()                                   = default;
         BencodeItem(const BencodeItem& item)            = default;
@@ -38,19 +38,19 @@ class BencodeItem : public std::variant<BencodeInt, BencodeString, BencodeList, 
          *
          * @return The start offset
          */
-        [[nodiscard]] size_t start() const { return start_off; }
+        [[nodiscard]] size_t start() const { return start_off_; }
 
         /**
          * @brief Get the length of the bencoded item in the bencoded string
          *
          * @return The length
          */
-        [[nodiscard]] size_t len() const { return elem_len; }
+        [[nodiscard]] size_t len() const { return elem_len_; }
 
     private:
         // start offset and length of the bencoded item in the input stream
-        size_t start_off{};
-        size_t elem_len{};
+        size_t start_off_{};
+        size_t elem_len_{};
 };
 
 /*

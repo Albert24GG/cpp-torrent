@@ -62,14 +62,14 @@ class Sha1 {
          *
          * @return A span of the hash
          */
-        [[nodiscard]] std::span<const uint8_t, SHA1_SIZE> get() const { return hash; }
+        [[nodiscard]] std::span<const uint8_t, SHA1_SIZE> get() const { return hash_; }
 
     private:
         explicit Sha1(std::span<const uint8_t, SHA1_SIZE> src) {
-            std::copy(src.begin(), src.end(), hash.begin());
+            std::copy(src.begin(), src.end(), hash_.begin());
         }
 
-        std::array<uint8_t, SHA1_SIZE> hash{};
+        std::array<uint8_t, SHA1_SIZE> hash_{};
 };
 
 }  // namespace torrent::crypto

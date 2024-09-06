@@ -15,12 +15,12 @@ namespace torrent::utils {
 class MemoryPool {
     public:
         MemoryPool(size_t block_size, size_t block_count)
-            : block_count{block_count},
-              free_blocks{block_count},
+            : block_count_{block_count},
+              free_blocks_{block_count},
               // Align block size to max align_t
-              aligned_block_size{next_aligned(block_size)},
-              pool(aligned_block_size * block_count),
-              next_free_block{pool.data()} {};
+              aligned_block_size_{next_aligned(block_size)},
+              pool_(aligned_block_size_ * block_count),
+              next_free_block_{pool_.data()} {};
 
         /**
          * @brief Allocate a block of memory of size n
@@ -48,7 +48,7 @@ class MemoryPool {
          * @note No bounds checking is performed
          */
         std::byte* addr_from_index(size_t index) {
-            return pool.data() + index * aligned_block_size;
+            return pool_.data() + index * aligned_block_size_;
         }
 
         /**
@@ -59,15 +59,15 @@ class MemoryPool {
          * @note No bounds checking is performed
          */
         size_t index_from_addr(std::byte* addr) {
-            return (addr - pool.data()) / aligned_block_size;
+            return (addr - pool_.data()) / aligned_block_size_;
         }
 
-        size_t                 block_count;
-        size_t                 aligned_block_size;
-        size_t                 free_blocks;
-        size_t                 initialized_blocks{0};
-        std::vector<std::byte> pool;
-        std::byte*             next_free_block{nullptr};
+        size_t                 block_count_;
+        size_t                 aligned_block_size_;
+        size_t                 free_blocks_;
+        size_t                 initialized_blocks_{0};
+        std::vector<std::byte> pool_;
+        std::byte*             next_free_block_{nullptr};
 };
 
 }  // namespace torrent::utils

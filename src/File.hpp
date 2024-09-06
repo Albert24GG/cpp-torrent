@@ -31,11 +31,11 @@ class File {
          *
          * @return the length of the file
          */
-        size_t get_length() const { return length; }
+        size_t get_length() const { return length_; }
 
     private:
-        std::fstream file;
-        size_t       length;
+        std::fstream file_;
+        size_t       length_;
 };
 
 }  // namespace torrent::fs

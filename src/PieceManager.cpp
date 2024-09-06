@@ -11,49 +11,49 @@
 namespace torrent {
 
 void PieceManager::update_pieces_availability(const std::vector<bool>& bitfield, int8_t sign) {
-    for (auto piece_idx : std::views::iota(0U, pieces_cnt)) {
+    for (auto piece_idx : std::views::iota(0U, pieces_cnt_)) {
         // Get the bit that represents the availability of the piece
-        piece_avail[piece_idx] += sign * static_cast<int8_t>(bitfield[piece_idx]);
+        piece_avail_[piece_idx] += sign * static_cast<int8_t>(bitfield[piece_idx]);
     }
-    are_pieces_sorted = false;
+    are_pieces_sorted_ = false;
 }
 
 void PieceManager::add_available_piece(uint32_t piece_index) {
     // If the pieces are sorted, we can update the availability without resorting the entire vector
-    if (are_pieces_sorted) {
+    if (are_pieces_sorted_) {
         // The index in the sorted_pieces vector of the last piece with the same availability as the
         // piece to be increased
         auto last_equal_piece =
             std::upper_bound(
-                sorted_pieces.begin(),
-                sorted_pieces.end(),
-                piece_avail[piece_index],
-                [&](uint32_t a, uint32_t b) { return piece_avail[a] < piece_avail[b]; }
+                sorted_pieces_.begin(),
+                sorted_pieces_.end(),
+                piece_avail_[piece_index],
+                [&](uint32_t a, uint32_t b) { return piece_avail_[a] < piece_avail_[b]; }
             ) -
-            sorted_pieces.begin() - 1;
+            sorted_pieces_.begin() - 1;
 
         // The index in the sorted_pieces vector of the piece to be increased
         auto increased_piece = last_equal_piece;
-        for (; increased_piece > 0 && sorted_pieces[increased_piece] != piece_index;
+        for (; increased_piece > 0 && sorted_pieces_[increased_piece] != piece_index;
              --increased_piece) {
             ;
         }
 
         // Swap the piece with the last piece that has the same availability
-        std::swap(sorted_pieces[increased_piece], sorted_pieces[last_equal_piece]);
+        std::swap(sorted_pieces_[increased_piece], sorted_pieces_[last_equal_piece]);
     }
-    ++piece_avail[piece_index];
+    ++piece_avail_[piece_index];
 }
 
 void PieceManager::receive_block(
     uint32_t piece_index, std::span<const std::byte> block, uint32_t offset
 ) {
     // If the piece is not requested, ignore the block
-    if (!requested_pieces.contains(piece_index)) {
+    if (!requested_pieces_.contains(piece_index)) {
         return;
     }
 
-    auto& piece = requested_pieces.at(piece_index);
+    auto& piece = requested_pieces_.at(piece_index);
     piece.receive_block(block, offset);
 
     if (!piece.is_complete()) {
@@ -68,12 +68,13 @@ void PieceManager::receive_block(
     )};
 
     auto hash{crypto::Sha1::digest(piece_data_uint8_view)};
-    auto ref_hash{crypto::Sha1::from_raw_data(piece_hashes.data() + piece_index * crypto::SHA1_SIZE)
+    auto ref_hash{
+        crypto::Sha1::from_raw_data(piece_hashes_.data() + piece_index * crypto::SHA1_SIZE)
     };
 
     if (hash != ref_hash) {
         // If hashes mismatch, mark piecd as incomplete
-        piece_completed[piece_index] = false;
+        piece_completed_[piece_index] = false;
         LOG_WARN("Piece {} hash mismatch. Discarding...", piece_index);
     } else {
         // If hashes match, write the piece to disk
@@ -81,47 +82,47 @@ void PieceManager::receive_block(
             reinterpret_cast<const char*>(piece_data.data()), piece_data.size()
         )};
 
-        file_manager->write(piece_data_char_view, piece_index * piece_size);
-        piece_completed[piece_index] = true;
-        --pieces_left;
+        file_manager_->write(piece_data_char_view, piece_index * piece_size_);
+        piece_completed_[piece_index] = true;
+        --pieces_left_;
     }
     // in either cases, remove the piece from the requested pieces
-    requested_pieces.erase(piece_index);
+    requested_pieces_.erase(piece_index);
 }
 
 auto PieceManager::request_next_block(const std::vector<bool>& bitfield
 ) -> std::optional<std::tuple<uint32_t, uint32_t, uint32_t>> {
-    if (pieces_left == 0) {
+    if (pieces_left_ == 0) {
         LOG_DEBUG("No more blocks to download");
         return std::nullopt;
     }
 
-    if (!are_pieces_sorted) {
-        std::sort(sorted_pieces.begin(), sorted_pieces.end(), [&](uint32_t a, uint32_t b) {
-            return piece_avail[a] < piece_avail[b];
+    if (!are_pieces_sorted_) {
+        std::sort(sorted_pieces_.begin(), sorted_pieces_.end(), [&](uint32_t a, uint32_t b) {
+            return piece_avail_[a] < piece_avail_[b];
         });
-        are_pieces_sorted = true;
+        are_pieces_sorted_ = true;
     }
 
-    for (auto piece_idx : sorted_pieces) {
+    for (auto piece_idx : sorted_pieces_) {
         // Skip completed pieces or pieces that the peer does not have
-        if (piece_completed[piece_idx] || !bitfield[piece_idx]) {
+        if (piece_completed_[piece_idx] || !bitfield[piece_idx]) {
             continue;
         }
 
-        if (!requested_pieces.contains(piece_idx)) {
-            if (requested_pieces.size() >= max_active_requests) {
+        if (!requested_pieces_.contains(piece_idx)) {
+            if (requested_pieces_.size() >= max_active_requests_) {
                 continue;
             }
             uint32_t cur_piece_size =
-                piece_idx == pieces_cnt - 1 ? 1 + (torrent_size - 1) % piece_size : piece_size;
-            requested_pieces.emplace(
+                piece_idx == pieces_cnt_ - 1 ? 1 + (torrent_size_ - 1) % piece_size_ : piece_size_;
+            requested_pieces_.emplace(
                 piece_idx,
-                Piece(cur_piece_size, piece_data_alloc, piece_util_alloc, block_request_timeout)
+                Piece(cur_piece_size, piece_data_alloc_, piece_util_alloc_, block_request_timeout_)
             );
         }
 
-        auto& piece = requested_pieces.at(piece_idx);
+        auto& piece = requested_pieces_.at(piece_idx);
 
         auto block_info = piece.request_next_block();
 

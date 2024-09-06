@@ -26,24 +26,24 @@ auto PeerRetriever::retrieve_peers(size_t downloaded, size_t uploaded)
     -> std::optional<std::vector<PeerInfo>> {
     // Try to retrieve peers from the current tracker
     auto peer_list =
-        cur_tracker != nullptr ? cur_tracker->retrieve_peers(downloaded, uploaded) : std::nullopt;
+        cur_tracker_ != nullptr ? cur_tracker_->retrieve_peers(downloaded, uploaded) : std::nullopt;
 
     if (peer_list.has_value()) {
         return peer_list;
     }
 
-    for (auto& announce_group : announce_list) {
+    for (auto& announce_group : announce_list_) {
         for (auto& announce : announce_group) {
             switch (get_tracker_type(announce)) {
                 case TrackerType::HTTP:
-                    cur_tracker = std::make_unique<HttpTracker>(
-                        announce, info_hash, client_id, client_port, torrent_size
+                    cur_tracker_ = std::make_unique<HttpTracker>(
+                        announce, info_hash_, client_id_, client_port_, torrent_size_
                     );
                     break;
 
                 case TrackerType::UDP:
-                    cur_tracker = std::make_unique<UdpTracker>(
-                        announce, info_hash, client_id, client_port, torrent_size
+                    cur_tracker_ = std::make_unique<UdpTracker>(
+                        announce, info_hash_, client_id_, client_port_, torrent_size_
                     );
                     break;
 
@@ -51,7 +51,7 @@ auto PeerRetriever::retrieve_peers(size_t downloaded, size_t uploaded)
                     continue;
             }
 
-            peer_list = cur_tracker->retrieve_peers(downloaded, uploaded);
+            peer_list = cur_tracker_->retrieve_peers(downloaded, uploaded);
 
             // If we successfully retrieved peers, move the current announce to the front of the
             // group

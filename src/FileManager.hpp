@@ -41,7 +41,7 @@ class FileManager {
 
     private:
         // pair containing the file start_offset and the file object
-        std::vector<std::pair<size_t, File>> files;
+        std::vector<std::pair<size_t, File>> files_;
 };
 
 }  // namespace torrent::fs

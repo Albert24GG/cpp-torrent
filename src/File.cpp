@@ -7,7 +7,7 @@
 
 namespace torrent::fs {
 
-File::File(const std::filesystem::path& path, size_t length) : length{length} {
+File::File(const std::filesystem::path& path, size_t length) : length_{length} {
     // create directories if they don't exist
     try {
         std::filesystem::create_directories(path.parent_path());
@@ -17,21 +17,21 @@ File::File(const std::filesystem::path& path, size_t length) : length{length} {
         );
     }
 
-    file.open(path, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc);
+    file_.open(path, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc);
 
-    if (!file.is_open()) {
+    if (!file_.is_open()) {
         err::throw_with_trace(std::format("Failed to open file: {}", path.string()));
     }
 }
 
 File::~File() {
-    file.close();
+    file_.close();
 }
 
 void File::write(std::span<const char> data, size_t offset) {
-    file.seekp(offset, std::ios::beg);
+    file_.seekp(offset, std::ios::beg);
 
-    if (!file.write(data.data(), data.size())) {
+    if (!file_.write(data.data(), data.size())) {
         err::throw_with_trace("Failed to write to file");
     }
 }

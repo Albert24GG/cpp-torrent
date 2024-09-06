@@ -1,5 +1,6 @@
-#include "Bencode.hpp"
 #include "HttpTracker.hpp"
+
+#include "Bencode.hpp"
 #include "Logger.hpp"
 #include "PeerInfo.hpp"
 #include "Utils.hpp"
@@ -52,26 +53,25 @@ std::optional<std::vector<torrent::PeerInfo>> extract_peers(
 namespace torrent {
 
 void HttpTracker::update_interval(const Bencode::BencodeDict& response_dict) {
-    this->interval =
-        std::chrono::seconds(std::get<Bencode::BencodeInt>(response_dict.at("interval")));
+    interval_ = std::chrono::seconds(std::get<Bencode::BencodeInt>(response_dict.at("interval")));
 }
 
 std::optional<std::vector<PeerInfo>> HttpTracker::retrieve_peers(
     size_t downloaded, size_t uploaded
 ) {
     // convert the info hash to a string
-    std::string info_hash_str{this->info_hash.get().begin(), this->info_hash.get().end()};
+    std::string info_hash_str{info_hash_.get().begin(), info_hash_.get().end()};
 
     cpr::Response response = cpr::Get(
-        cpr::Url{this->announce},
+        cpr::Url{announce_},
         cpr::Parameters{
             {"info_hash", info_hash_str},
-            {"peer_id", this->torr_client_id},
-            {"port", std::to_string(this->torr_client_port)},
+            {"peer_id", torr_client_id_},
+            {"port", std::to_string(torr_client_port_)},
             {"uploaded", std::to_string(uploaded)},
             {"downloaded", std::to_string(downloaded)},
-            {"left", std::to_string(this->torrent_size - downloaded)},
-            {"compact", this->compact ? "1" : "0"}
+            {"left", std::to_string(torrent_size_ - downloaded)},
+            {"compact", compact_ ? "1" : "0"}
         }
     );
 
@@ -88,8 +88,8 @@ std::optional<std::vector<PeerInfo>> HttpTracker::retrieve_peers(
     try {
         auto response_dict = std::get<Bencode::BencodeDict>(Bencode::BDecode(response.text));
 
-        this->update_interval(response_dict);
-        LOG_DEBUG("Tracker interval: {}s", this->interval.count());
+        update_interval(response_dict);
+        LOG_DEBUG("Tracker interval: {}s", interval_.count());
 
         return extract_peers(response_dict);
 

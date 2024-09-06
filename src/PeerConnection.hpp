@@ -31,10 +31,10 @@ class PeerConnection {
         PeerConnection(
             asio::io_context& io_context, PieceManager& piece_manager, PeerInfo peer_info
         )
-            : peer_conn_ctx{io_context},
-              socket{io_context},
-              piece_manager{piece_manager},
-              peer_info{std::move(peer_info)} {}
+            : peer_conn_ctx_{io_context},
+              socket_{io_context},
+              piece_manager_{piece_manager},
+              peer_info_{std::move(peer_info)} {}
 
         /*
          * @brief Connect to the peer and perform the handshake.
@@ -56,21 +56,21 @@ class PeerConnection {
          *
          * @return The state of the peer connection
          */
-        [[nodiscard]] PeerState get_state() const { return state; }
+        [[nodiscard]] PeerState get_state() const { return state_; }
 
         /**
          * @brief Get the number of retries left
          *
          * @return The number of retries left
          */
-        [[nodiscard]] uint8_t get_retries_left() const { return retries_left; }
+        [[nodiscard]] uint8_t get_retries_left() const { return retries_left_; }
 
         /**
          * @brief Disconnect the peer connection
          */
         void disconnect() {
-            state = PeerState::DISCONNECTED;
-            socket.close();
+            state_ = PeerState::DISCONNECTED;
+            socket_.close();
         }
 
     private:
@@ -146,30 +146,30 @@ class PeerConnection {
          */
         void handle_piece_message(std::span<std::byte> payload);
 
-        asio::io_context&     peer_conn_ctx;
-        asio::ip::tcp::socket socket;
-        PieceManager&         piece_manager;
-        PeerInfo              peer_info;
-        uint8_t               retries_left{MAX_RETRIES};
+        asio::io_context&     peer_conn_ctx_;
+        asio::ip::tcp::socket socket_;
+        PieceManager&         piece_manager_;
+        PeerInfo              peer_info_;
+        uint8_t               retries_left_{MAX_RETRIES};
 
         // client is choking the peer
-        bool am_choking{true};
+        bool am_choking_{true};
         // client is interested in the peer
-        bool am_interested{false};
+        bool am_interested_{false};
         // peer is choking the client
-        bool peer_choking{true};
+        bool peer_choking_{true};
         // peer is interested in the client
-        bool      peer_interested{false};
-        PeerState state{PeerState::UNINITIATED};
+        bool      peer_interested_{false};
+        PeerState state_{PeerState::UNINITIATED};
 
         // Buffer for the sent messages
-        std::vector<std::byte> send_buffer;
+        std::vector<std::byte> send_buffer_;
         // Buffer for the received messages
         // Initialize the buffer with the size of the handshake message, and resize it after the
         // connection is done
-        std::vector<std::byte> receive_buffer{message::HANDSHAKE_MESSAGE_SIZE};
+        std::vector<std::byte> receive_buffer_{message::HANDSHAKE_MESSAGE_SIZE};
 
-        std::vector<bool> bitfield;
+        std::vector<bool> bitfield_;
 };
 
 };  // namespace torrent::peer

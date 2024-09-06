@@ -24,19 +24,19 @@ class Piece {
             torrent::utils::FixedSizeAllocator<uint16_t>&  piece_util_alloc,
             std::chrono::milliseconds request_timeout = duration::REQUEST_TIMEOUT
         )
-            : piece_size{size},
-              blocks_cnt{utils::ceil_div(size, BLOCK_SIZE)},
-              blocks_left{blocks_cnt},
-              block_request_timeout{request_timeout},
-              piece_data(size, piece_data_alloc),
-              block_request_time(
-                  blocks_cnt, std::chrono::time_point<std::chrono::steady_clock>::min()
+            : piece_size_{size},
+              blocks_cnt_{utils::ceil_div(size, BLOCK_SIZE)},
+              blocks_left_{blocks_cnt_},
+              block_request_timeout_{request_timeout},
+              piece_data_(size, piece_data_alloc),
+              block_request_time_(
+                  blocks_cnt_, std::chrono::time_point<std::chrono::steady_clock>::min()
               ),
-              remaining_blocks(blocks_cnt, piece_util_alloc),
-              block_pos_in_rem(blocks_cnt, piece_util_alloc) {
+              remaining_blocks_(blocks_cnt_, piece_util_alloc),
+              block_pos_in_rem_(blocks_cnt_, piece_util_alloc) {
             // Fill the vectors with the indices of the blocks
-            for (auto i : std::views::iota(0U, blocks_cnt)) {
-                remaining_blocks[i] = block_pos_in_rem[i] = i;
+            for (auto i : std::views::iota(0U, blocks_cnt_)) {
+                remaining_blocks_[i] = block_pos_in_rem_[i] = i;
             }
         }
 
@@ -61,7 +61,7 @@ class Piece {
          *
          * @return true if the piece is complete, false otherwise
          */
-        [[nodiscard]] bool is_complete() const { return blocks_left == 0; }
+        [[nodiscard]] bool is_complete() const { return blocks_left_ == 0; }
 
         /**
          * @brief Get a view to the underlying data of the piece.
@@ -69,7 +69,7 @@ class Piece {
          * @return a span containing the data of the piece
          * @note The span is only valid if the piece is complete
          */
-        std::span<const std::byte> get_data() { return piece_data; }
+        std::span<const std::byte> get_data() { return piece_data_; }
 
     private:
         /**
@@ -92,7 +92,7 @@ class Piece {
          * greater than or equal to blocks_left (i.e., it has been moved to the end of the vector)
          */
         [[nodiscard]] bool is_block_received(uint16_t block_index) const {
-            return block_pos_in_rem[block_index] >= blocks_left;
+            return block_pos_in_rem_[block_index] >= blocks_left_;
         }
 
         /**
@@ -102,27 +102,27 @@ class Piece {
          * @return true if the block request has timed out, false otherwise
          */
         [[nodiscard]] bool is_block_timed_out(uint16_t block_index) const {
-            return std::chrono::steady_clock::now() - block_request_timeout >
-                   block_request_time[block_index];
+            return std::chrono::steady_clock::now() - block_request_timeout_ >
+                   block_request_time_[block_index];
         }
 
-        uint32_t                                                              piece_size;
-        size_t                                                                blocks_cnt;
-        size_t                                                                blocks_left;
-        std::chrono::milliseconds                                             block_request_timeout;
-        std::vector<std::byte, torrent::utils::FixedSizeAllocator<std::byte>> piece_data;
+        uint32_t                  piece_size_;
+        size_t                    blocks_cnt_;
+        size_t                    blocks_left_;
+        std::chrono::milliseconds block_request_timeout_;
+        std::vector<std::byte, torrent::utils::FixedSizeAllocator<std::byte>> piece_data_;
 
         // Request time of each block
         // Unrequested = time_point::min()
-        std::vector<std::chrono::time_point<std::chrono::steady_clock>> block_request_time;
+        std::vector<std::chrono::time_point<std::chrono::steady_clock>> block_request_time_;
         // Vector containing indices of blocks that have not been received (will be moving the
         // received blocks to the end, pointed by blocks_left)
         // Using blocks_left as a pointer to the first received block
-        std::vector<uint16_t, utils::FixedSizeAllocator<uint16_t>> remaining_blocks;
+        std::vector<uint16_t, utils::FixedSizeAllocator<uint16_t>> remaining_blocks_;
 
         // Vector containing the position of each block index in the remaining_blocks vector
         // E.g.: block_pos_in_rem[i] = j -> remaining_block[j] = i
-        std::vector<uint16_t, utils::FixedSizeAllocator<uint16_t>> block_pos_in_rem;
+        std::vector<uint16_t, utils::FixedSizeAllocator<uint16_t>> block_pos_in_rem_;
 };
 
 }  // namespace torrent

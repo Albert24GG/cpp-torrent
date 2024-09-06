@@ -25,11 +25,11 @@ class PeerManager {
             const crypto::Sha1&           info_hash,
             const std::string&            peer_id
         )
-            : piece_manager(std::move(piece_manager)), info_hash(info_hash) {
+            : piece_manager_(std::move(piece_manager)), info_hash_(info_hash) {
             if (peer_id.size() != 20) {
                 err::throw_with_trace("Peer ID must be 20 bytes long");
             }
-            handshake_message = message::create_handshake_message(
+            handshake_message_ = message::create_handshake_message(
                 info_hash, std::span<const char, 20>(peer_id.data(), 20)
             );
         }
@@ -86,31 +86,31 @@ class PeerManager {
          */
         asio::awaitable<void> cleanup_peer_connections();
 
-        asio::io_context                                           peer_conn_ctx;
-        asio::executor_work_guard<asio::io_context::executor_type> peer_conn_work_guard{
-            asio::make_work_guard(peer_conn_ctx)
+        asio::io_context                                           peer_conn_ctx_;
+        asio::executor_work_guard<asio::io_context::executor_type> peer_conn_work_guard_{
+            asio::make_work_guard(peer_conn_ctx_)
         };
 
-        asio::io_context                                           utils_ctx;
-        asio::executor_work_guard<asio::io_context::executor_type> utils_work_guard{
-            asio::make_work_guard(utils_ctx)
+        asio::io_context                                           utils_ctx_;
+        asio::executor_work_guard<asio::io_context::executor_type> utils_work_guard_{
+            asio::make_work_guard(utils_ctx_)
         };
 
         // Mutex to protect the peer_connections map from concurrent access (adding peers + cleanup)
-        std::mutex peer_connections_mutex;
+        std::mutex peer_connections_mutex_;
 
         // Run the peer connection context in a separate thread
-        std::jthread peer_connection_thread;
+        std::jthread peer_connection_thread_;
         // Run the utility context in a separate thread
-        std::jthread utils_thread;
+        std::jthread utils_thread_;
 
         // Map of peer connections
         // the bool value indicates whether the peer is currently being reconnected
-        std::unordered_map<PeerInfo, std::pair<peer::PeerConnection, bool>> peer_connections;
-        std::shared_ptr<PieceManager>                                       piece_manager;
-        message::HandshakeMessage                                           handshake_message;
-        crypto::Sha1                                                        info_hash;
-        bool                                                                started{false};
+        std::unordered_map<PeerInfo, std::pair<peer::PeerConnection, bool>> peer_connections_;
+        std::shared_ptr<PieceManager>                                       piece_manager_;
+        message::HandshakeMessage                                           handshake_message_;
+        crypto::Sha1                                                        info_hash_;
+        bool                                                                started_{false};
 };
 
 };  // namespace torrent

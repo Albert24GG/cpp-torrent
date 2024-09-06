@@ -28,12 +28,12 @@ namespace torrent::peer {
 
 auto PeerConnection::receive_handshake()
     -> awaitable<std::expected<crypto::Sha1, std::error_code>> {
-    LOG_DEBUG("Waiting for handshake message from peer {}:{}", peer_info.ip, peer_info.port);
+    LOG_DEBUG("Waiting for handshake message from peer {}:{}", peer_info_.ip, peer_info_.port);
 
     // Receive the handshake message
     auto handshake_result = co_await utils::tcp::receive_data_with_timeout(
-        socket,
-        std::span<std::byte, message::HANDSHAKE_MESSAGE_SIZE>(receive_buffer),
+        socket_,
+        std::span<std::byte, message::HANDSHAKE_MESSAGE_SIZE>(receive_buffer_),
         duration::HANDSHAKE_TIMEOUT
     );
 
@@ -44,7 +44,7 @@ auto PeerConnection::receive_handshake()
     // Parse the handshake message
 
     if (auto info_hash = message::parse_handshake_message(
-            std::span<const std::byte, message::HANDSHAKE_MESSAGE_SIZE>(receive_buffer)
+            std::span<const std::byte, message::HANDSHAKE_MESSAGE_SIZE>(receive_buffer_)
         );
         !info_hash.has_value()) {
         co_return std::unexpected(std::error_code{});
@@ -55,28 +55,28 @@ auto PeerConnection::receive_handshake()
 
 auto PeerConnection::send_handshake(const message::HandshakeMessage& handshake_message
 ) -> awaitable<std::expected<void, std::error_code>> {
-    LOG_DEBUG("Sending handshake message to peer {}:{}", peer_info.ip, peer_info.port);
+    LOG_DEBUG("Sending handshake message to peer {}:{}", peer_info_.ip, peer_info_.port);
 
     auto res = co_await utils::tcp::send_data_with_timeout(
-        socket, handshake_message, duration::HANDSHAKE_TIMEOUT
+        socket_, handshake_message, duration::HANDSHAKE_TIMEOUT
     );
 
     co_return res;
 }
 
 auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std::error_code>> {
-    LOG_DEBUG("Establishing connection with peer {}:{}", peer_info.ip, peer_info.port);
+    LOG_DEBUG("Establishing connection with peer {}:{}", peer_info_.ip, peer_info_.port);
 
     // Resolve the peer endpoint
     tcp::endpoint peer_endpoint = *tcp::resolver(co_await this_coro::executor)
-                                       .resolve(peer_info.ip, std::to_string(peer_info.port));
+                                       .resolve(peer_info_.ip, std::to_string(peer_info_.port));
 
     std::chrono::steady_clock::time_point deadline{
         std::chrono::steady_clock::now() + duration::CONNECTION_TIMEOUT
     };
 
     auto result = co_await (
-        socket.async_connect(peer_endpoint, use_nothrow_awaitable) || utils::watchdog(deadline)
+        socket_.async_connect(peer_endpoint, use_nothrow_awaitable) || utils::watchdog(deadline)
     );
 
     std::expected<void, std::error_code> connection_result;
@@ -100,19 +100,19 @@ auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std
 
 void PeerConnection::load_block_requests() {
     // Reset the buffer
-    send_buffer.clear();
+    send_buffer_.clear();
 
     for (auto i : std::views::iota(0, MAX_BLOCKS_IN_FLIGHT)) {
-        auto request = piece_manager.request_next_block(bitfield);
+        auto request = piece_manager_.request_next_block(bitfield_);
         if (!request.has_value()) {
             break;
         }
 
         auto [piece_index, block_offset, block_size] = *request;
-        send_buffer.insert(send_buffer.end(), 17, std::byte{0});
+        send_buffer_.insert(send_buffer_.end(), 17, std::byte{0});
 
         message::create_request_message(
-            std::span<std::byte>(send_buffer).subspan(i * 17, 17),
+            std::span<std::byte>(send_buffer_).subspan(i * 17, 17),
             piece_index,
             block_offset,
             block_size
@@ -121,26 +121,26 @@ void PeerConnection::load_block_requests() {
 }
 
 awaitable<void> PeerConnection::send_requests() {
-    while (!piece_manager.completed()) {
+    while (!piece_manager_.completed()) {
         co_await asio::steady_timer(co_await this_coro::executor, duration::REQUEST_INTERVAL)
             .async_wait(use_nothrow_awaitable);
-        if (peer_choking) {
+        if (peer_choking_) {
             continue;
         }
         load_block_requests();
 
-        if (send_buffer.empty()) {
+        if (send_buffer_.empty()) {
             continue;
         }
 
         if (auto res = co_await utils::tcp::send_data_with_timeout(
-                socket, send_buffer, duration::SEND_MSG_TIMEOUT
+                socket_, send_buffer_, duration::SEND_MSG_TIMEOUT
             );
             !res.has_value()) {
             LOG_DEBUG(
                 "Failed to send request message to peer {}:{} with error:\n{}",
-                peer_info.ip,
-                peer_info.port,
+                peer_info_.ip,
+                peer_info_.port,
                 res.error().message()
             );
             co_await handle_failure(res.error());
@@ -151,12 +151,12 @@ awaitable<void> PeerConnection::send_requests() {
 }
 
 awaitable<void> PeerConnection::receive_messages() {
-    while (!piece_manager.completed()) {
+    while (!piece_manager_.completed()) {
         uint32_t message_size{};
 
         std::expected<void, std::error_code> res;
         res = co_await utils::tcp::receive_data_with_timeout(
-            socket,
+            socket_,
             std::span<std::byte>(reinterpret_cast<std::byte*>(&message_size), 4),
             duration::RECEIVE_MSG_TIMEOUT
         );
@@ -164,8 +164,8 @@ awaitable<void> PeerConnection::receive_messages() {
         if (!res.has_value()) {
             LOG_DEBUG(
                 "Failed to receive message size from peer {}:{} with error:\n{}",
-                peer_info.ip,
-                peer_info.port,
+                peer_info_.ip,
+                peer_info_.port,
                 res.error().message()
             );
             co_await handle_failure(res.error());
@@ -183,14 +183,14 @@ awaitable<void> PeerConnection::receive_messages() {
         std::byte id{};
 
         res = co_await utils::tcp::receive_data_with_timeout(
-            socket, std::span<std::byte>(&id, 1), duration::RECEIVE_MSG_TIMEOUT
+            socket_, std::span<std::byte>(&id, 1), duration::RECEIVE_MSG_TIMEOUT
         );
 
         if (!res.has_value()) {
             LOG_DEBUG(
                 "Failed to receive message id from peer {}:{} with error:\n{}",
-                peer_info.ip,
-                peer_info.port,
+                peer_info_.ip,
+                peer_info_.port,
                 res.error().message()
             );
             co_await handle_failure(res.error());
@@ -200,16 +200,16 @@ awaitable<void> PeerConnection::receive_messages() {
         std::optional<std::span<std::byte>> payload{std::nullopt};
 
         if (message_size > 1) {
-            payload = std::span<std::byte>(receive_buffer).subspan(0, message_size - 1);
+            payload = std::span<std::byte>(receive_buffer_).subspan(0, message_size - 1);
 
             if (res = co_await utils::tcp::receive_data_with_timeout(
-                    socket, *payload, duration::RECEIVE_MSG_TIMEOUT
+                    socket_, *payload, duration::RECEIVE_MSG_TIMEOUT
                 );
                 !res.has_value()) {
                 LOG_DEBUG(
                     "Failed to receive message payload from peer {}:{} with error:\n{}",
-                    peer_info.ip,
-                    peer_info.port,
+                    peer_info_.ip,
+                    peer_info_.port,
                     res.error().message()
                 );
                 co_await handle_failure(res.error());
@@ -226,10 +226,10 @@ asio::awaitable<void> PeerConnection::handle_message(message::Message msg) {
     using message::MessageType;
     switch (msg.id) {
         case MessageType::CHOKE:
-            peer_choking = true;
+            peer_choking_ = true;
             break;
         case MessageType::UNCHOKE:
-            peer_choking = false;
+            peer_choking_ = false;
             break;
         case MessageType::INTERESTED:
             break;
@@ -253,16 +253,16 @@ asio::awaitable<void> PeerConnection::handle_message(message::Message msg) {
 void PeerConnection::handle_have_message(std::span<std::byte> payload) {
     uint32_t piece_index{};
     std::ranges::copy(std::span<std::byte, 4>(payload), reinterpret_cast<std::byte*>(&piece_index));
-    piece_index           = utils::network_to_host_order(piece_index);
-    bitfield[piece_index] = true;
-    piece_manager.add_available_piece(piece_index);
+    piece_index            = utils::network_to_host_order(piece_index);
+    bitfield_[piece_index] = true;
+    piece_manager_.add_available_piece(piece_index);
 }
 
 void PeerConnection::handle_bitfield_message(std::span<std::byte> payload) {
-    for (auto i : std::views::iota(0U, bitfield.size())) {
-        bitfield[i] = (static_cast<uint8_t>(payload[i >> 3]) >> (7U - (i & 7U))) & 1U;
+    for (auto i : std::views::iota(0U, bitfield_.size())) {
+        bitfield_[i] = (static_cast<uint8_t>(payload[i >> 3]) >> (7U - (i & 7U))) & 1U;
     }
-    piece_manager.add_peer_bitfield(bitfield);
+    piece_manager_.add_peer_bitfield(bitfield_);
 }
 
 void PeerConnection::handle_piece_message(std::span<std::byte> payload) {
@@ -271,14 +271,14 @@ void PeerConnection::handle_piece_message(std::span<std::byte> payload) {
         return;
     }
     auto [piece_index, block_data, block_offset] = *parsed_message;
-    piece_manager.receive_block(piece_index, block_data, block_offset);
+    piece_manager_.receive_block(piece_index, block_data, block_offset);
 }
 
 asio::awaitable<void> PeerConnection::handle_failure(std::error_code ec) {
     // Set the state appropriately
-    state = ec == asio::error::timed_out ? PeerState::TIMED_OUT : PeerState::DISCONNECTED;
+    state_ = ec == asio::error::timed_out ? PeerState::TIMED_OUT : PeerState::DISCONNECTED;
     // Close the socket
-    socket.close();
+    socket_.close();
     co_return;
 }
 
@@ -286,21 +286,21 @@ awaitable<void> PeerConnection::connect(
     const message::HandshakeMessage& handshake_message, const crypto::Sha1& info_hash
 ) {
     // Manage the retries
-    if (retries_left == 0) {
+    if (retries_left_ == 0) {
         co_return;
     }
-    --retries_left;
+    --retries_left_;
 
     // Set the state to connecting
-    state = PeerState::CONNECTING;
+    state_ = PeerState::CONNECTING;
 
     // Connect to the peer
 
     if (auto res = co_await establish_connection(); !res.has_value()) {
         LOG_DEBUG(
             "Failed to connect to peer {}:{} with error:\n{}",
-            peer_info.ip,
-            peer_info.port,
+            peer_info_.ip,
+            peer_info_.port,
             res.error().message()
         );
         co_await handle_failure(res.error());
@@ -312,8 +312,8 @@ awaitable<void> PeerConnection::connect(
     if (auto res = co_await send_handshake(handshake_message); !res.has_value()) {
         LOG_DEBUG(
             "Failed to send handshake message to peer {}:{} with error:\n{}",
-            peer_info.ip,
-            peer_info.port,
+            peer_info_.ip,
+            peer_info_.port,
             res.error().message()
         );
         co_await handle_failure(res.error());
@@ -325,23 +325,23 @@ awaitable<void> PeerConnection::connect(
     if (auto res = co_await receive_handshake(); !res.has_value()) {
         LOG_DEBUG(
             "Failed to receive handshake message from peer {}:{} with error:\n{}",
-            peer_info.ip,
-            peer_info.port,
+            peer_info_.ip,
+            peer_info_.port,
             res.error().message()
         );
         co_await handle_failure(res.error());
         co_return;
     } else if (*res != info_hash) {
         LOG_DEBUG(
-            "Received invalid handshake message from peer {}:{}", peer_info.ip, peer_info.port
+            "Received invalid handshake message from peer {}:{}", peer_info_.ip, peer_info_.port
         );
         co_await handle_failure(asio::error::invalid_argument);
         co_return;
     }
 
     // Set the state to connected
-    state = PeerState::CONNECTED;
-    LOG_DEBUG("Successfully connected to peer {}:{}", peer_info.ip, peer_info.port);
+    state_ = PeerState::CONNECTED;
+    LOG_DEBUG("Successfully connected to peer {}:{}", peer_info_.ip, peer_info_.port);
 
     co_return;
 
@@ -350,21 +350,21 @@ awaitable<void> PeerConnection::connect(
 
 awaitable<void> PeerConnection::run() {
     // Resize the send buffer to the max size of a message sent at once
-    send_buffer.resize(message::MAX_SENT_MSG_SIZE * MAX_BLOCKS_IN_FLIGHT);
+    send_buffer_.resize(message::MAX_SENT_MSG_SIZE * MAX_BLOCKS_IN_FLIGHT);
 
     // Send interested message
 
-    std::span<std::byte, 5> interested_message(send_buffer);
+    std::span<std::byte, 5> interested_message(send_buffer_);
     message::create_interested_message(interested_message);
 
     if (auto res = co_await utils::tcp::send_data_with_timeout(
-            socket, interested_message, duration::SEND_MSG_TIMEOUT
+            socket_, interested_message, duration::SEND_MSG_TIMEOUT
         );
         !res.has_value()) {
         LOG_DEBUG(
             "Failed to send interested message to peer {}:{} with error:\n{}",
-            peer_info.ip,
-            peer_info.port,
+            peer_info_.ip,
+            peer_info_.port,
             res.error().message()
         );
         co_await handle_failure(res.error());
@@ -373,23 +373,23 @@ awaitable<void> PeerConnection::run() {
 
     // Set the state to running
 
-    state = PeerState::RUNNING;
+    state_ = PeerState::RUNNING;
 
     // Resize the bitfield
 
-    bitfield.resize(piece_manager.get_piece_count());
+    bitfield_.resize(piece_manager_.get_piece_count());
 
     // Resize the receive buffer to the max size of a payload received at once
     // (either a piece msg or bitfield msg)
 
-    receive_buffer.resize(
-        std::max(8 + static_cast<size_t>(BLOCK_SIZE), utils::ceil_div(bitfield.size(), 8uz))
+    receive_buffer_.resize(
+        std::max(8 + static_cast<size_t>(BLOCK_SIZE), utils::ceil_div(bitfield_.size(), 8uz))
     );
 
     // Start the send requests and receive messages coroutines
 
     co_await (send_requests() || receive_messages());
-    piece_manager.remove_peer_bitfield(bitfield);
-    LOG_DEBUG("Peer {}:{} stopped running", peer_info.ip, peer_info.port);
+    piece_manager_.remove_peer_bitfield(bitfield_);
+    LOG_DEBUG("Peer {}:{} stopped running", peer_info_.ip, peer_info_.port);
 }
 }  // namespace torrent::peer

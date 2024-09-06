@@ -8,10 +8,8 @@
 #include <asio.hpp>
 #include <cstdint>
 #include <expected>
-#include <iostream>
 #include <optional>
 #include <string>
-#include <thread>
 #include <tuple>
 #include <vector>
 
@@ -26,15 +24,15 @@ class UdpTracker final : public ITracker {
             uint16_t           client_port,
             size_t             torrent_size
         )
-            : info_hash(info_hash),
-              torr_client_id(std::move(client_id)),
-              torr_client_port(client_port),
-              torrent_size(torrent_size) {
-            if (torr_client_id.size() != 20) {
+            : info_hash_(info_hash),
+              torr_client_id_(std::move(client_id)),
+              torr_client_port_(client_port),
+              torrent_size_(torrent_size) {
+            if (torr_client_id_.size() != 20) {
                 err::throw_with_trace("Client ID must be 20 bytes long");
             }
 
-            std::tie(host, port) = extract_url_info(announce);
+            std::tie(host_, port_) = extract_url_info(announce);
         }
 
         /**
@@ -81,15 +79,15 @@ class UdpTracker final : public ITracker {
             uint64_t                       connection_id
         ) -> asio::awaitable<std::expected<std::vector<PeerInfo>, std::error_code>>;
 
-        std::string host;
-        uint16_t    port{};
+        std::string host_;
+        uint16_t    port_{};
 
-        crypto::Sha1         info_hash;
-        std::string          torr_client_id;
-        uint16_t             torr_client_port;
-        uint64_t             uploaded{0};
-        uint64_t             downloaded{};
-        uint64_t             torrent_size{};
+        crypto::Sha1         info_hash_;
+        std::string          torr_client_id_;
+        uint16_t             torr_client_port_;
+        uint64_t             uploaded_{0};
+        uint64_t             downloaded_{};
+        uint64_t             torrent_size_{};
         std::chrono::seconds interval{};
 };
 

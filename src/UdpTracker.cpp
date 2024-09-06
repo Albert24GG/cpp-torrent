@@ -12,7 +12,6 @@
 #include <charconv>
 #include <cstdint>
 #include <expected>
-#include <iostream>
 #include <optional>
 #include <ranges>
 #include <regex>
@@ -135,24 +134,24 @@ auto UdpTracker::send_announce_request(
 
     // Set the info hash
     std::ranges::copy(
-        std::as_bytes(info_hash.get()), std::ranges::begin(announce_buffer | std::views::drop(16))
+        std::as_bytes(info_hash_.get()), std::ranges::begin(announce_buffer | std::views::drop(16))
     );
 
     // Set the peer id
     std::ranges::copy(
-        std::as_bytes(std::span{torr_client_id}),
+        std::as_bytes(std::span{torr_client_id_}),
         std::ranges::begin(announce_buffer | std::views::drop(36))
     );
 
     *reinterpret_cast<uint64_t*>(announce_buffer.data() + 56) =
-        utils::host_to_network_order(downloaded);
+        utils::host_to_network_order(downloaded_);
 
     // Set the left bytes
     *reinterpret_cast<uint64_t*>(announce_buffer.data() + 64) =
-        utils::host_to_network_order(torrent_size - downloaded);
+        utils::host_to_network_order(torrent_size_ - downloaded_);
 
     *reinterpret_cast<uint64_t*>(announce_buffer.data() + 72) =
-        utils::host_to_network_order(uploaded);
+        utils::host_to_network_order(uploaded_);
 
     // Set the event (0 for none)
     *reinterpret_cast<uint32_t*>(announce_buffer.data() + 80) = 0;
@@ -167,7 +166,7 @@ auto UdpTracker::send_announce_request(
         utils::host_to_network_order(static_cast<uint32_t>(UDP_TRACKER_NUM_WANT));
 
     *reinterpret_cast<uint16_t*>(announce_buffer.data() + 96) =
-        utils::host_to_network_order(torr_client_port);
+        utils::host_to_network_order(torr_client_port_);
 
     // Send the announce request
     if (auto res = co_await utils::udp::send_data(socket, announce_buffer, tracker_endpoint);
@@ -214,8 +213,8 @@ auto UdpTracker::retrieve_peers(size_t downloaded, size_t uploaded)
     asio::io_context                     io_context;
     std::optional<std::vector<PeerInfo>> extracted_peers;
 
-    this->downloaded = downloaded;
-    this->uploaded   = uploaded;
+    downloaded_ = downloaded;
+    uploaded_   = uploaded;
 
     asio::co_spawn(
         io_context,
@@ -224,12 +223,15 @@ auto UdpTracker::retrieve_peers(size_t downloaded, size_t uploaded)
 
             auto [error, result_endpoints] =
                 co_await udp::resolver{co_await this_coro::executor}.async_resolve(
-                    host, std::to_string(port), use_nothrow_awaitable
+                    host_, std::to_string(port_), use_nothrow_awaitable
                 );
 
             if (error) {
                 LOG_ERROR(
-                    "Failed to resolve udp host {}:{} with error : {}", host, port, error.message()
+                    "Failed to resolve udp host {}:{} with error : {}",
+                    host_,
+                    port_,
+                    error.message()
                 );
                 co_return;
             }
@@ -243,8 +245,8 @@ auto UdpTracker::retrieve_peers(size_t downloaded, size_t uploaded)
                 !res.has_value()) {
                 LOG_ERROR(
                     "Failed to connect to tracker {}:{} with error : {}",
-                    host,
-                    port,
+                    host_,
+                    port_,
                     res.error().message()
                 );
                 co_return;
@@ -256,8 +258,8 @@ auto UdpTracker::retrieve_peers(size_t downloaded, size_t uploaded)
                 !res.has_value()) {
                 LOG_ERROR(
                     "Failed to retrieve peers from udp tracker {}:{} with error : {}",
-                    host,
-                    port,
+                    host_,
+                    port_,
                     res.error().message()
                 );
                 co_return;

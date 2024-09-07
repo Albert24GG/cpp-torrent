@@ -3,6 +3,7 @@
 #include "Duration.hpp"
 #include "Logger.hpp"
 #include "PeerConnection.hpp"
+#include "Utils.hpp"
 
 #include <asio.hpp>
 #include <asio/experimental/as_tuple.hpp>
@@ -113,8 +114,20 @@ asio::awaitable<void> PeerManager::try_reconnection(
 ) {
     LOG_DEBUG("Trying to reconnect to peer {}:{}", peer_info.ip, peer_info.port);
 
-    while (peer.get_state() != peer::PeerState::CONNECTED && peer.get_retries_left() > 0) {
+    // Start with a random backoff delay between 1 and 5 seconds and double it on each retry
+    auto backoff_delay{std::chrono::seconds(utils::generate_random<uint32_t>(1, 5))};
+
+    while (peer.get_retries_left() > 0) {
         co_await peer.connect(handshake_message_, info_hash_);
+
+        // Break the loop if the connection is established or there are no more retries left
+        if (peer.get_state() == peer::PeerState::CONNECTED || peer.get_retries_left() == 0) {
+            break;
+        }
+
+        co_await asio::steady_timer(co_await this_coro::executor, backoff_delay)
+            .async_wait(use_nothrow_awaitable);
+        backoff_delay *= 2;
     }
 
     if (peer.get_state() != peer::PeerState::CONNECTED) {
@@ -161,7 +174,6 @@ awaitable<void> PeerManager::cleanup_peer_connections() {
                     it = peer_connections_.erase(it);
                     break;
                 case peer::PeerState::TIMED_OUT:
-                    // TODO: Maybe implement exponential backoff
                     is_reconnecting = true;
                     co_spawn(
                         co_await this_coro::executor,

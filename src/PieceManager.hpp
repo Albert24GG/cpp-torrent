@@ -106,6 +106,13 @@ class PieceManager {
          */
         size_t get_piece_count() const { return pieces_cnt_; }
 
+        /**
+         * @brief Get the number of bytes downloaded
+         *
+         * @return Number of bytes downloaded
+         */
+        size_t get_downloaded_bytes() const { return (pieces_cnt_ - pieces_left_) * piece_size_; }
+
     private:
         /**
          * @brief Update the availability of pieces

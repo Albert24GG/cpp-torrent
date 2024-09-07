@@ -43,8 +43,17 @@ class HttpTracker final : public ITracker {
          * @param uploaded The number of bytes uploaded
          * @return A list of peers if the request was successful, an empty optional otherwise
          */
-        std::optional<std::vector<PeerInfo>> retrieve_peers(size_t downloaded, size_t uploaded = 0)
-            override;
+        auto retrieve_peers(size_t downloaded, size_t uploaded = 0)
+            -> std::optional<std::vector<PeerInfo>> override;
+
+        /**
+         * @brief Get the interval at which the client should poll the tracker
+         *
+         * @return The interval
+         */
+        [[nodiscard]] auto get_interval() const -> std::chrono::seconds override {
+            return interval_;
+        }
 
     private:
         /**

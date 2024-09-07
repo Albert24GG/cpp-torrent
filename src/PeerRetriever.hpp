@@ -48,6 +48,15 @@ class PeerRetriever {
         auto retrieve_peers(size_t downloaded, size_t uploaded = 0)
             -> std::optional<std::vector<PeerInfo>>;
 
+        /**
+         * @brief Get the interval at which the client should poll the tracker
+         *
+         * @return The interval
+         */
+        [[nodiscard]] auto get_interval() const -> std::chrono::seconds {
+            return cur_tracker_ != nullptr ? cur_tracker_->get_interval() : std::chrono::seconds(0);
+        }
+
     private:
         std::unique_ptr<ITracker>             cur_tracker_;
         std::vector<std::vector<std::string>> announce_list_;

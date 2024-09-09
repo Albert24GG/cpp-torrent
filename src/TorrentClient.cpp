@@ -57,6 +57,14 @@ TorrentClient::TorrentClient(
         port,
         file_manager_->get_total_length()
     );
+
+    // set the total_bytes field in stats
+    stats_.total_bytes = file_manager_->get_total_length();
+}
+
+void TorrentClient::update_stats() {
+    stats_.downloaded_bytes = piece_manager_->get_downloaded_bytes();
+    stats_.connected_peers  = peer_manager_->get_connected_peers();
 }
 
 void TorrentClient::start_download() {
@@ -65,6 +73,9 @@ void TorrentClient::start_download() {
     if (!peers.has_value()) {
         err::throw_with_trace("Failed to retrieve peers from the tracker");
     }
+
+    // Mark the start of the download
+    stats_.start_time = std::chrono::steady_clock::now();
 
     peer_manager_->add_peers(*peers);
 

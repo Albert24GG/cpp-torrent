@@ -9,6 +9,7 @@
 
 #include <array>
 #include <asio.hpp>
+#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -58,6 +59,16 @@ class PeerManager {
          * @note Peers that cannot be connected will be dropped.
          */
         void add_peers(std::span<PeerInfo> peers);
+
+        /**
+         * @brief Get the number of active connections
+         *
+         * @return The number of active connections
+         * @note This function is thread-safe
+         */
+        uint32_t get_connected_peers() const {
+            return connected_peers_.load(std::memory_order_relaxed);
+        }
 
     private:
         /**
@@ -111,6 +122,7 @@ class PeerManager {
         message::HandshakeMessage                                           handshake_message_;
         crypto::Sha1                                                        info_hash_;
         bool                                                                started_{false};
+        std::atomic<uint32_t>                                               connected_peers_{0};
 };
 
 };  // namespace torrent

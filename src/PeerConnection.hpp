@@ -73,6 +73,13 @@ class PeerConnection {
             socket_.close();
         }
 
+        /**
+         * @brief Check if the peer was connected prior to the current state
+         *
+         * @return true if the peer was connected, false otherwise
+         */
+        [[nodiscard]] bool was_connected() const { return was_connected_; }
+
     private:
         /**
          * @brief Receive a handshake message from the peer
@@ -161,6 +168,9 @@ class PeerConnection {
         // peer is interested in the client
         bool      peer_interested_{false};
         PeerState state_{PeerState::UNINITIATED};
+
+        // Flag to indicate whether the peer was connected prior to the current state
+        bool was_connected_{false};
 
         // Buffer for the sent messages
         std::vector<std::byte> send_buffer_;

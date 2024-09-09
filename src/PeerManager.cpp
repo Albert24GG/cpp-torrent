@@ -58,6 +58,7 @@ void PeerManager::add_peers(std::span<PeerInfo> peers) {
                     }
                 } else if (peer_connection.get_state() == peer::PeerState::CONNECTED) {
                     co_spawn(peer_conn_ctx_, peer_connection.run(), asio::detached);
+                    connected_peers_.fetch_add(1, std::memory_order_relaxed);
                 }
 
                 if (--remaining_connections == 0) {
@@ -139,6 +140,7 @@ asio::awaitable<void> PeerManager::try_reconnection(
         peer.disconnect();
     } else {
         co_spawn(co_await this_coro::executor, peer.run(), asio::detached);
+        connected_peers_.fetch_add(1, std::memory_order_relaxed);
     }
 
     is_reconnecting = false;
@@ -172,6 +174,10 @@ awaitable<void> PeerManager::cleanup_peer_connections() {
                         "Removed peer {}:{} from the peer connections", it->first.ip, it->first.port
                     );
                     it = peer_connections_.erase(it);
+                    // If the peer was connected (added to the connected_peers count), decrement it
+                    if (peer_connection.was_connected()) {
+                        connected_peers_.fetch_sub(1, std::memory_order_relaxed);
+                    }
                     break;
                 case peer::PeerState::TIMED_OUT:
                     is_reconnecting = true;
@@ -180,6 +186,10 @@ awaitable<void> PeerManager::cleanup_peer_connections() {
                         try_reconnection(it->first, peer_connection, is_reconnecting),
                         asio::detached
                     );
+                    // If the peer was connected (added to the connected_peers count), decrement it
+                    if (peer_connection.was_connected()) {
+                        connected_peers_.fetch_sub(1, std::memory_order_relaxed);
+                    }
                     break;
                 default:
                     ++it;

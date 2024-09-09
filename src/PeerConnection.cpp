@@ -290,6 +290,7 @@ awaitable<void> PeerConnection::connect(
         co_return;
     }
     --retries_left_;
+    was_connected_ = false;
 
     // Set the state to connecting
     state_ = PeerState::CONNECTING;
@@ -342,6 +343,11 @@ awaitable<void> PeerConnection::connect(
     // Set the state to connected
     state_ = PeerState::CONNECTED;
     LOG_DEBUG("Successfully connected to peer {}:{}", peer_info_.ip, peer_info_.port);
+
+    // Reset the retries
+    retries_left_ = MAX_RETRIES;
+
+    was_connected_ = true;
 
     co_return;
 

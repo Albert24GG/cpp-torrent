@@ -100,7 +100,7 @@ void PeerManager::stop() {
 awaitable<void> PeerManager::handle_download_completion() {
     asio::steady_timer timer(co_await this_coro::executor);
 
-    while (!piece_manager_->completed()) {
+    while (!piece_manager_->completed_thread_safe()) {
         timer.expires_after(std::chrono::seconds(1));
         co_await timer.async_wait(use_nothrow_awaitable);
     }

@@ -6,6 +6,7 @@
 #include "Piece.hpp"
 #include "Utils.hpp"
 
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -96,8 +97,19 @@ class PieceManager {
          * @brief Check if the all the pieces have been downloaded
          *
          * @return True if the torrent is completed
+         * @note This function is not thread-safe
          */
         bool completed() const { return pieces_left_ == 0; }
+
+        /**
+         * @brief Check if the all the pieces have been downloaded
+         *
+         * @return True if the torrent is completed
+         * @note This function is thread-safe
+         */
+        bool completed_thread_safe() const {
+            return completion_flag_.test(std::memory_order_acquire);
+        }
 
         /**
          * @brief Get the number of pieces in the torrent
@@ -110,8 +122,11 @@ class PieceManager {
          * @brief Get the number of bytes downloaded
          *
          * @return Number of bytes downloaded
+         * @note This function is thread-safe
          */
-        size_t get_downloaded_bytes() const { return (pieces_cnt_ - pieces_left_) * piece_size_; }
+        size_t get_downloaded_bytes() const {
+            return (pieces_cnt_ - pieces_left_.load(std::memory_order_acquire)) * piece_size_;
+        }
 
     private:
         /**
@@ -126,7 +141,7 @@ class PieceManager {
         uint32_t                         piece_size_;
         size_t                           torrent_size_;
         size_t                           pieces_cnt_;
-        size_t                           pieces_left_;
+        std::atomic<size_t>              pieces_left_;
         std::chrono::milliseconds        block_request_timeout_;
         std::shared_ptr<fs::FileManager> file_manager_;
         std::vector<bool>                piece_completed_;
@@ -143,6 +158,9 @@ class PieceManager {
         // Vector of indices of pieces sorted by availability
         std::vector<uint32_t> sorted_pieces_;
         bool                  are_pieces_sorted_{false};
+
+        // Atomic flag that indicates completion of the download
+        std::atomic_flag completion_flag_{ATOMIC_FLAG_INIT};
 };
 
 }  // namespace torrent

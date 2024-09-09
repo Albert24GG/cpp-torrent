@@ -4,6 +4,7 @@
 #include "Logger.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <ranges>
 #include <span>
@@ -84,7 +85,9 @@ void PieceManager::receive_block(
 
         file_manager_->write(piece_data_char_view, piece_index * piece_size_);
         piece_completed_[piece_index] = true;
-        --pieces_left_;
+        if (pieces_left_.fetch_sub(1, std::memory_order_release) == 1) {
+            completion_flag_.test_and_set(std::memory_order_release);
+        }
     }
     // in either cases, remove the piece from the requested pieces
     requested_pieces_.erase(piece_index);
@@ -92,7 +95,7 @@ void PieceManager::receive_block(
 
 auto PieceManager::request_next_block(const std::vector<bool>& bitfield
 ) -> std::optional<std::tuple<uint32_t, uint32_t, uint32_t>> {
-    if (pieces_left_ == 0) {
+    if (this->completed()) {
         LOG_DEBUG("No more blocks to download");
         return std::nullopt;
     }

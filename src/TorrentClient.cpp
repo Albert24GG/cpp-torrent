@@ -70,7 +70,7 @@ void TorrentClient::start_download() {
 
     auto next_request_time{std::chrono::steady_clock::now() + peer_retriever_->get_interval()};
 
-    while (!piece_manager_->completed()) {
+    while (!piece_manager_->completed_thread_safe()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
         if (std::chrono::steady_clock::now() >= next_request_time) {

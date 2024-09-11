@@ -279,6 +279,10 @@ asio::awaitable<void> PeerConnection::handle_failure(std::error_code ec) {
     state_ = ec == asio::error::timed_out ? PeerState::TIMED_OUT : PeerState::DISCONNECTED;
     // Close the socket
     socket_.close();
+
+    // Reset the bitfield status
+    bitfield_received_ = false;
+
     co_return;
 }
 
@@ -395,7 +399,11 @@ awaitable<void> PeerConnection::run() {
     // Start the send requests and receive messages coroutines
 
     co_await (send_requests() || receive_messages());
-    piece_manager_.remove_peer_bitfield(bitfield_);
+
+    if (bitfield_received_) {
+        piece_manager_.remove_peer_bitfield(bitfield_);
+    }
+
     LOG_DEBUG("Peer {}:{} stopped running", peer_info_.ip, peer_info_.port);
 }
 }  // namespace torrent::peer

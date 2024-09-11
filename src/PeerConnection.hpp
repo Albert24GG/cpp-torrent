@@ -171,6 +171,8 @@ class PeerConnection {
 
         // Flag to indicate whether the peer was connected prior to the current state
         bool was_connected_{false};
+        // Flag to indicate whether bitfield was received
+        bool bitfield_received_{false};
 
         // Buffer for the sent messages
         std::vector<std::byte> send_buffer_;

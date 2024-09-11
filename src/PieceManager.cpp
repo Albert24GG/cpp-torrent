@@ -12,11 +12,15 @@
 namespace torrent {
 
 void PieceManager::update_pieces_availability(const std::vector<bool>& bitfield, int8_t sign) {
+    size_t set_bits{0U};
     for (auto piece_idx : std::views::iota(0U, pieces_cnt_)) {
         // Get the bit that represents the availability of the piece
-        piece_avail_[piece_idx] += sign * static_cast<int8_t>(bitfield[piece_idx]);
+        int8_t cur_piece_avail{static_cast<int8_t>(bitfield[piece_idx])};
+        piece_avail_[piece_idx] += sign * cur_piece_avail;
+        set_bits += static_cast<size_t>(cur_piece_avail);
     }
-    are_pieces_sorted_ = false;
+    // Require resorting if the number of set bits changed
+    are_pieces_sorted_ = (set_bits == 0);
 }
 
 void PieceManager::add_available_piece(uint32_t piece_index) {

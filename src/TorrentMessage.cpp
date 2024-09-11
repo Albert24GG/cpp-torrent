@@ -22,7 +22,7 @@ HandshakeMessage create_handshake_message(
     // Set the protocol identifier
     std::ranges::copy(
         std::as_bytes(std::span<const char>(PROTOCOL_IDENTIFIER)),
-        std::begin(
+        std::ranges::begin(
             handshake_message | std::views::drop(1) | std::views::take(PROTOCOL_IDENTIFIER_SIZE)
         )
     );

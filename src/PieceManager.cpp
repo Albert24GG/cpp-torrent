@@ -105,7 +105,7 @@ auto PieceManager::request_next_block(const std::vector<bool>& bitfield
     }
 
     if (!are_pieces_sorted_) {
-        std::sort(sorted_pieces_.begin(), sorted_pieces_.end(), [&](uint32_t a, uint32_t b) {
+        std::ranges::sort(sorted_pieces_, [&](uint32_t a, uint32_t b) {
             return piece_avail_[a] < piece_avail_[b];
         });
         are_pieces_sorted_ = true;

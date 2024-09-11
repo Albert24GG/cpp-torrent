@@ -63,5 +63,5 @@ TEST_CASE("Tracker: retrieve_peers", "[Tracker]") {
 
     REQUIRE(retrieved_peers->size() == 5);
 
-    REQUIRE(std::equal(retrieved_peers->begin(), retrieved_peers->end(), peers.begin()));
+    REQUIRE(std::ranges::equal(*retrieved_peers, peers));
 }

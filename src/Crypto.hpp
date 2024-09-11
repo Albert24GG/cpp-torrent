@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -18,7 +19,9 @@ class Sha1 {
         Sha1& operator=(Sha1&&)      = default;
         ~Sha1()                      = default;
 
-        friend bool operator==(const Sha1& h1, const Sha1& h2);
+        friend bool operator==(const Sha1& h1, const Sha1& h2) {
+            return std::ranges::equal(h1.hash_, h2.hash_);
+        }
 
         /**
          * @brief Create a SHA-1 hash from raw data
@@ -66,7 +69,7 @@ class Sha1 {
 
     private:
         explicit Sha1(std::span<const uint8_t, SHA1_SIZE> src) {
-            std::copy(src.begin(), src.end(), hash_.begin());
+            std::ranges::copy(src, hash_.begin());
         }
 
         std::array<uint8_t, SHA1_SIZE> hash_{};

@@ -2,6 +2,7 @@
 
 #include "Error.hpp"
 #include "FileManager.hpp"
+#include "Logger.hpp"
 #include "PeerRetriever.hpp"
 #include "Utils.hpp"
 
@@ -77,6 +78,7 @@ void TorrentClient::start_download() {
     // Mark the start of the download
     stats_.start_time = std::chrono::steady_clock::now();
 
+    peer_manager_->start();
     peer_manager_->add_peers(*peers);
 
     auto next_request_time{std::chrono::steady_clock::now() + peer_retriever_->get_interval()};
@@ -92,6 +94,10 @@ void TorrentClient::start_download() {
             next_request_time = std::chrono::steady_clock::now() + peer_retriever_->get_interval();
         }
     }
+
+    // Mark the end of the download
+    LOG_INFO("Download completed");
+    peer_manager_->stop();
 }
 
 }  // namespace torrent

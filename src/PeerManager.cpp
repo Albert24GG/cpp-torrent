@@ -79,10 +79,9 @@ void PeerManager::start() {
     utils_thread_ = std::jthread([this] { utils_ctx_.run(); });
     // Start the cleanup task
     co_spawn(utils_ctx_, cleanup_peer_connections(), asio::detached);
-    // Start the download completion task
-    co_spawn(utils_ctx_, handle_download_completion(), asio::detached);
 
     started_ = true;
+    LOG_DEBUG("PeerManager started");
 }
 
 void PeerManager::stop() {
@@ -96,18 +95,7 @@ void PeerManager::stop() {
     peer_conn_ctx_.stop();
     utils_ctx_.stop();
     started_ = false;
-}
-
-awaitable<void> PeerManager::handle_download_completion() {
-    asio::steady_timer timer(co_await this_coro::executor);
-
-    while (!piece_manager_->completed_thread_safe()) {
-        timer.expires_after(std::chrono::seconds(1));
-        co_await timer.async_wait(use_nothrow_awaitable);
-    }
-
-    LOG_INFO("Download completed. Stopping the PeerManager");
-    stop();
+    LOG_DEBUG("PeerManager stopped");
 }
 
 asio::awaitable<void> PeerManager::try_reconnection(

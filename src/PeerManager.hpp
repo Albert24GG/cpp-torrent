@@ -72,11 +72,6 @@ class PeerManager {
 
     private:
         /**
-         * @brief Handler to automatically stop the manager when download is completed
-         */
-        asio::awaitable<void> handle_download_completion();
-
-        /**
          * @brief Try to reconnect to a peer
          *
          * @param peer_info The peer info

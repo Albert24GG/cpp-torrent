@@ -63,7 +63,7 @@ TorrentClient::TorrentClient(
     stats_.total_bytes = file_manager_->get_total_length();
 }
 
-void TorrentClient::update_stats() {
+void TorrentClient::update_stats() const {
     stats_.downloaded_bytes = piece_manager_->get_downloaded_bytes();
     stats_.connected_peers  = peer_manager_->get_connected_peers();
 }
@@ -75,10 +75,12 @@ void TorrentClient::start_download() {
         err::throw_with_trace("Failed to retrieve peers from the tracker");
     }
 
+    peer_manager_->start();
+
     // Mark the start of the download
     stats_.start_time = std::chrono::steady_clock::now();
+    download_status_.store(DownloadStatus::DOWNLOADING, std::memory_order_release);
 
-    peer_manager_->start();
     peer_manager_->add_peers(*peers);
 
     auto next_request_time{std::chrono::steady_clock::now() + peer_retriever_->get_interval()};
@@ -98,6 +100,7 @@ void TorrentClient::start_download() {
     // Mark the end of the download
     LOG_INFO("Download completed");
     peer_manager_->stop();
+    download_status_.store(DownloadStatus::FINISHED, std::memory_order_release);
 }
 
 }  // namespace torrent

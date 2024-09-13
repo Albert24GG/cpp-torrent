@@ -12,8 +12,8 @@ struct Stats {
          *
          * @return The elapsed seconds
          */
-        [[nodiscard]] auto get_elapsed_seconds() const -> std::chrono::seconds {
-            return std::chrono::duration_cast<std::chrono::seconds>(
+        [[nodiscard]] auto get_elapsed_ms() const -> std::chrono::milliseconds {
+            return std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - start_time
             );
         }
@@ -24,7 +24,7 @@ struct Stats {
          * @return The download rate
          */
         [[nodiscard]] double get_download_rate() const {
-            return static_cast<double>(downloaded_bytes) / get_elapsed_seconds().count();
+            return static_cast<double>(downloaded_bytes) * 1'000 / get_elapsed_ms().count();
         }
 
         /**
@@ -51,9 +51,11 @@ struct Stats {
          * @return The estimated time of arrival
          */
         [[nodiscard]] auto get_eta() const -> std::chrono::seconds {
-            return std::chrono::seconds{
-                static_cast<long>((total_bytes - downloaded_bytes) / get_download_rate())
-            };
+            auto download_rate = get_download_rate();
+            return download_rate == 0.0 ? std::numeric_limits<std::chrono::seconds>::max()
+                                        : std::chrono::seconds{static_cast<long>(
+                                              (total_bytes - downloaded_bytes) / get_download_rate()
+                                          )};
         }
 
         /**

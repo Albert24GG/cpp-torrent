@@ -2,12 +2,12 @@ add_rules("mode.debug", "mode.release")
 
 set_languages("c++23")
 
-add_requires("catch2", "cpptrace", "openssl3", "cpr", "cpp-httplib", "spdlog", "asio")
+add_requires("catch2", "cpptrace", "openssl3", "cpr", "cpp-httplib", "spdlog", "asio", "indicators")
 
 target("test")
     set_kind("binary")
     add_files("src/*.cpp")
-    add_packages("cpptrace", "openssl3", "cpr", "cpp-httplib", "spdlog", "asio")
+    add_packages("cpptrace", "openssl3", "cpr", "spdlog", "asio", "indicators")
 
 rule("run_tests")
     after_build(function (target)
@@ -17,7 +17,7 @@ rule("run_tests")
 target("catch2-test")
     set_kind("binary")
     add_files("test/*.cpp")
-    add_files("src/*.cpp|main.cpp")
+    add_files("src/*.cpp|main.cpp|ProgressBar.cpp")
     add_packages("catch2","cpptrace", "openssl3", "cpr", "cpp-httplib", "spdlog", "asio")
     add_includedirs("src")
     add_rules("run_tests")

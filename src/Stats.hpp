@@ -24,7 +24,7 @@ struct Stats {
          * @return The download rate
          */
         [[nodiscard]] double get_download_rate() const {
-            return static_cast<double>(downloaded_bytes) * 1'000 / get_elapsed_ms().count();
+            return static_cast<double>(downloaded_bytes * 1'000) / get_elapsed_ms().count();
         }
 
         /**
@@ -52,10 +52,11 @@ struct Stats {
          */
         [[nodiscard]] auto get_eta() const -> std::chrono::seconds {
             auto download_rate = get_download_rate();
-            return download_rate == 0.0 ? std::numeric_limits<std::chrono::seconds>::max()
-                                        : std::chrono::seconds{static_cast<long>(
-                                              (total_bytes - downloaded_bytes) / get_download_rate()
-                                          )};
+            return download_rate == 0.0
+                       ? std::chrono::seconds::max()
+                       : std::chrono::seconds{
+                             static_cast<long>((total_bytes - downloaded_bytes) / download_rate)
+                         };
         }
 
         /**

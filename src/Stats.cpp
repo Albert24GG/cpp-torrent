@@ -21,16 +21,17 @@ std::string Stats::get_formatted_download_rate() const {
 }
 
 std::string Stats::get_formatted_eta() const {
-    size_t eta{static_cast<size_t>(get_eta().count())};
+    auto eta{get_eta()};
 
-    if (eta == std::numeric_limits<std::chrono::seconds>::max().count()) {
+    if (eta == std::chrono::seconds::max()) {
         return "Inf";
     }
 
-    size_t days_left{eta / 86'400};
-    size_t hours_left{(eta % 86'400) / 3'600};
-    size_t minutes_left{(eta % 3'600) / 60};
-    size_t seconds_left{eta % 60};
+    size_t eta_quant{static_cast<size_t>(eta.count())};
+    size_t days_left{eta_quant / 86'400};
+    size_t hours_left{(eta_quant % 86'400) / 3'600};
+    size_t minutes_left{(eta_quant % 3'600) / 60};
+    size_t seconds_left{eta_quant % 60};
 
     std::string formatted_eta{};
 

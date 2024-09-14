@@ -14,13 +14,13 @@ torrent::logger::Level          global_level{torrent::logger::Level::info};
 
 namespace torrent::logger {
 
-void init(const std::filesystem::path& log_dir, const std::string& log_name) {
+void init(const std::filesystem::path& log_file) {
     if (global_logger) {
         err::throw_with_trace("Logger already initialized");
     }
 
     if (global_level != Level::off) {
-        global_logger = spdlog::basic_logger_mt("torrent-logger", log_dir / log_name);
+        global_logger = spdlog::basic_logger_mt("torrent-logger", log_file);
         global_logger->set_level(static_cast<spdlog::level::level_enum>(global_level));
     }
 }

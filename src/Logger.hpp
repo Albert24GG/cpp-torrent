@@ -31,9 +31,7 @@ enum class Level {
  * @param log_dir The directory where the log file will be stored
  * @param log_name The name of the log file
  */
-void init(
-    const std::filesystem::path& log_dir = ".", const std::string& log_name = "torrent-log.txt"
-);
+void init(const std::filesystem::path& log_file = "./log.txt");
 
 /**
  * @brief Get the instance of the logger

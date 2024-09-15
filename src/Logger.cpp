@@ -30,11 +30,16 @@ spdlog::logger* get_instance() {
     if (!global_logger) {
         init();
     }
-    return global_logger.get();
+    if (!global_logger) {
+        return spdlog::default_logger_raw();
+    } else {
+        return global_logger.get();
+    }
 }
 
 void set_level(Level level) {
     global_level = level;
+    spdlog::set_level(static_cast<spdlog::level::level_enum>(level));
     if (global_logger) {
         global_logger->set_level(static_cast<spdlog::level::level_enum>(level));
     }

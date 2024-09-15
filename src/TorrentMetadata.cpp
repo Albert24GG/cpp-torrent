@@ -38,7 +38,8 @@ inline void check_field(const Bencode::BencodeDict& dict, const std::string& fie
     check_field_type<RequiredType>(dict.at(field), field);
 }
 
-using Torrent_Info_Content = std::tuple<size_t, std::vector<torrent::md::FileInfo>, std::string>;
+using Torrent_Info_Content =
+    std::tuple<std::string, size_t, std::vector<torrent::md::FileInfo>, std::string>;
 
 using Torrent_Info_File_Entry = std::pair<size_t, std::filesystem::path>;
 
@@ -67,17 +68,17 @@ Torrent_Info_Content parse_info(Bencode::BencodeDict& torrent_info) {
 
     std::vector<torrent::md::FileInfo> files;
 
+    auto name = std::get<Bencode::BencodeString>(torrent_info["name"]);
+
     if (torrent_info.contains("length")) {  // single file
         check_field_type<Bencode::BencodeInt>(torrent_info["length"], "length");
 
         auto& file_length = std::get<Bencode::BencodeInt>(torrent_info["length"]);
-        auto& file_path   = std::get<Bencode::BencodeString>(torrent_info["name"]);
 
-        files.emplace_back(std::move(file_path), 0, file_length);
+        files.emplace_back(name, 0, file_length);
     } else {  // multiple files
         check_field<Bencode::BencodeList>(torrent_info, "files");
-        auto dest_dir =
-            std::filesystem::path(std::get<Bencode::BencodeString>(torrent_info["name"]));
+        auto   dest_dir  = std::filesystem::path(name);
         auto&  file_list = std::get<Bencode::BencodeList>(torrent_info["files"]);
         size_t cur_offset{0};
 
@@ -95,7 +96,7 @@ Torrent_Info_Content parse_info(Bencode::BencodeDict& torrent_info) {
 
     auto piece_length = std::get<Bencode::BencodeInt>(torrent_info["piece length"]);
     auto pieces       = std::move(std::get<Bencode::BencodeString>(torrent_info["pieces"]));
-    return {piece_length, std::move(files), std::move(pieces)};
+    return {std::move(name), piece_length, std::move(files), std::move(pieces)};
 }
 
 torrent::crypto::Sha1 get_info_hash(
@@ -160,13 +161,14 @@ TorrentMetadata parse_torrent_file(std::istream& torrent_istream) {
 
     auto& torrent_info = std::get<Bencode::BencodeDict>(torrent_dict["info"]);
 
-    auto [piece_length, files, piece_hashes] = parse_info(torrent_info);
+    auto [name, piece_length, files, piece_hashes] = parse_info(torrent_info);
 
     auto info_hash = get_info_hash(torrent_istream, torrent_dict["info"]);
 
     auto& announce = std::get<Bencode::BencodeString>(torrent_dict["announce"]);
 
     return {
+        .name          = std::move(name),
         .announce      = std::move(announce),
         .announce_list = std::move(announce_list),
         .piece_hashes  = std::move(piece_hashes),

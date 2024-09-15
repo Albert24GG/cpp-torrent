@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
@@ -59,6 +60,13 @@ TorrentClient::TorrentClient(
 
     // set the total_bytes field in stats
     stats_.total_bytes = file_manager_->get_total_length();
+
+    std::cout << std::format(
+                     "Torrent name: {}\nTotal size: {} B\n",
+                     torrent_md_.name,
+                     file_manager_->get_total_length()
+                 )
+              << std::flush;
 }
 
 void TorrentClient::update_stats() const {

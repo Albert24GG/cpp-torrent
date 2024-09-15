@@ -15,9 +15,6 @@
 
 namespace torrent {
 
-// The interval at which the client should make requests to the tracker
-constexpr inline auto UDP_TRACKER_INTERVAL{std::chrono::seconds(900)};
-
 class UdpTracker final : public ITracker {
     public:
         UdpTracker(
@@ -51,10 +48,10 @@ class UdpTracker final : public ITracker {
         /**
          * @brief Get the interval at which the client should poll the tracker
          *
-         * @return The interval
+         * @return  The interval
          */
         [[nodiscard]] auto get_interval() const -> std::chrono::seconds override {
-            return UDP_TRACKER_INTERVAL;
+            return interval_;
         }
 
     private:
@@ -100,7 +97,7 @@ class UdpTracker final : public ITracker {
         uint64_t             uploaded_{0};
         uint64_t             downloaded_{};
         uint64_t             torrent_size_{};
-        std::chrono::seconds interval{};
+        std::chrono::seconds interval_{};
 };
 
 }  // namespace torrent

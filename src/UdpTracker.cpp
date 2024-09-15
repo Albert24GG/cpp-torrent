@@ -200,6 +200,10 @@ auto UdpTracker::send_announce_request(
         utils::network_to_host_order(*reinterpret_cast<uint32_t*>(announce_buffer.data() + 4))
     };
 
+    interval_ = std::chrono::seconds{
+        utils::network_to_host_order(*reinterpret_cast<uint32_t*>(announce_buffer.data() + 8))
+    };
+
     if (received_action != 1 || received_transaction_id != transaction_id) {
         co_return std::unexpected(std::make_error_code(std::errc::protocol_error));
     }

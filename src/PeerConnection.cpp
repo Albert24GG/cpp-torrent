@@ -98,11 +98,13 @@ auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std
     co_return connection_result;
 }
 
-void PeerConnection::load_block_requests() {
+uint32_t PeerConnection::load_block_requests(uint32_t num_blocks) {
     // Reset the buffer
     send_buffer_.clear();
 
-    for (auto i : std::views::iota(0, MAX_BLOCKS_IN_FLIGHT)) {
+    uint32_t blocks_requested{};
+
+    for (auto i : std::views::iota(0U, num_blocks)) {
         auto request = piece_manager_.request_next_block(bitfield_);
         if (!request.has_value()) {
             break;
@@ -112,12 +114,16 @@ void PeerConnection::load_block_requests() {
         send_buffer_.insert(send_buffer_.end(), 17, std::byte{0});
 
         message::create_request_message(
-            std::span<std::byte>(send_buffer_).subspan(i * 17, 17),
+            std::span<std::byte>(send_buffer_).subspan(i * 17U, 17),
             piece_index,
             block_offset,
             block_size
         );
+
+        ++blocks_requested;
     }
+
+    return blocks_requested;
 }
 
 awaitable<void> PeerConnection::send_requests() {
@@ -127,9 +133,12 @@ awaitable<void> PeerConnection::send_requests() {
         if (peer_choking_) {
             continue;
         }
-        load_block_requests();
 
-        if (send_buffer_.empty()) {
+        auto requested_blocks = load_block_requests(
+            std::min(MAX_BLOCKS_IN_FLIGHT - pending_block_requests_, MAX_BLOCKS_PER_REQUEST)
+        );
+
+        if (requested_blocks == 0) {
             continue;
         }
 
@@ -146,6 +155,8 @@ awaitable<void> PeerConnection::send_requests() {
             co_await handle_failure(res.error());
             co_return;
         }
+
+        pending_block_requests_ += requested_blocks;
     }
     co_return;
 }
@@ -263,6 +274,7 @@ void PeerConnection::handle_bitfield_message(std::span<std::byte> payload) {
         bitfield_[i] = (static_cast<uint8_t>(payload[i >> 3]) >> (7U - (i & 7U))) & 1U;
     }
     piece_manager_.add_peer_bitfield(bitfield_);
+    bitfield_received_ = true;
 }
 
 void PeerConnection::handle_piece_message(std::span<std::byte> payload) {
@@ -272,6 +284,7 @@ void PeerConnection::handle_piece_message(std::span<std::byte> payload) {
     }
     auto [piece_index, block_data, block_offset] = *parsed_message;
     piece_manager_.receive_block(piece_index, block_data, block_offset);
+    --pending_block_requests_;
 }
 
 asio::awaitable<void> PeerConnection::handle_failure(std::error_code ec) {
@@ -280,10 +293,18 @@ asio::awaitable<void> PeerConnection::handle_failure(std::error_code ec) {
     // Close the socket
     socket_.close();
 
-    // Reset the bitfield status
-    bitfield_received_ = false;
-
     co_return;
+}
+
+void PeerConnection::reset_state() {
+    state_                  = PeerState::UNINITIATED;
+    am_choking_             = true;
+    am_interested_          = false;
+    peer_choking_           = true;
+    peer_interested_        = false;
+    pending_block_requests_ = 0;
+    bitfield_received_      = false;
+    was_connected_          = false;
 }
 
 awaitable<void> PeerConnection::connect(
@@ -294,7 +315,9 @@ awaitable<void> PeerConnection::connect(
         co_return;
     }
     --retries_left_;
-    was_connected_ = false;
+
+    // Reset the state
+    reset_state();
 
     // Set the state to connecting
     state_ = PeerState::CONNECTING;

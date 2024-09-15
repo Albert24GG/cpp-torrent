@@ -104,7 +104,7 @@ asio::awaitable<void> PeerManager::try_reconnection(
     LOG_DEBUG("Trying to reconnect to peer {}:{}", peer_info.ip, peer_info.port);
 
     // Start with a random backoff delay between 1 and 5 seconds and double it on each retry
-    auto backoff_delay{std::chrono::seconds(utils::generate_random<uint32_t>(1, 5))};
+    auto backoff_delay{std::chrono::seconds(utils::generate_random<uint32_t>(5, 10))};
 
     while (peer.get_retries_left() > 0) {
         co_await peer.connect(handshake_message_, info_hash_);

@@ -14,17 +14,11 @@
 namespace torrent::peer {
 
 // Max blocks that can be requested from a peer at a time
-inline constexpr auto    MAX_BLOCKS_IN_FLIGHT{5};
-inline constexpr uint8_t MAX_RETRIES{5};
+inline constexpr auto MAX_BLOCKS_IN_FLIGHT{10U};
+inline constexpr auto MAX_BLOCKS_PER_REQUEST{5U};
+inline constexpr auto MAX_RETRIES{3U};
 
-enum class PeerState : uint8_t {
-    UNINITIATED,
-    CONNECTING,
-    CONNECTED,
-    RUNNING,
-    DISCONNECTED,
-    TIMED_OUT
-};
+enum class PeerState { UNINITIATED, CONNECTING, CONNECTED, RUNNING, DISCONNECTED, TIMED_OUT };
 
 class PeerConnection {
     public:
@@ -107,8 +101,11 @@ class PeerConnection {
 
         /**
          * @brief Load the next block requests in the send_buffer
+         *
+         * @param num_blocks the maximum number of blocks to request
+         * @return the number of blocks requested
          */
-        void load_block_requests();
+        uint32_t load_block_requests(uint32_t num_blocks);
 
         /**
          * @brief Send the next block requests to the peer
@@ -153,6 +150,12 @@ class PeerConnection {
          */
         void handle_piece_message(std::span<std::byte> payload);
 
+        /**
+         * @brief Reset the state of the peer connection
+         * Used when connecting/reconnecting to a peer
+         */
+        void reset_state();
+
         asio::io_context&     peer_conn_ctx_;
         asio::ip::tcp::socket socket_;
         PieceManager&         piece_manager_;
@@ -182,6 +185,8 @@ class PeerConnection {
         std::vector<std::byte> receive_buffer_{message::HANDSHAKE_MESSAGE_SIZE};
 
         std::vector<bool> bitfield_;
+
+        uint32_t pending_block_requests_{0U};
 };
 
 };  // namespace torrent::peer

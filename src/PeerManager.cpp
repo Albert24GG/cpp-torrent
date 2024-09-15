@@ -106,7 +106,7 @@ asio::awaitable<void> PeerManager::try_reconnection(
     // Start with a random backoff delay between 1 and 5 seconds and double it on each retry
     auto backoff_delay{std::chrono::seconds(utils::generate_random<uint32_t>(5, 10))};
 
-    while (peer.get_retries_left() > 0) {
+    while (peer.get_retries_left() > 0 && get_connected_peers() < MAX_PEER_COUNT) {
         co_await peer.connect(handshake_message_, info_hash_);
 
         // Break the loop if the connection is established or there are no more retries left
@@ -119,7 +119,7 @@ asio::awaitable<void> PeerManager::try_reconnection(
         backoff_delay *= 2;
     }
 
-    if (peer.get_state() != peer::PeerState::CONNECTED) {
+    if (peer.get_state() != peer::PeerState::CONNECTED || get_connected_peers() >= MAX_PEER_COUNT) {
         LOG_ERROR(
             "Failed to reconnect to peer {}:{}. Removing the peer connection",
             peer_info.ip,
@@ -136,8 +136,7 @@ asio::awaitable<void> PeerManager::try_reconnection(
 }
 
 awaitable<void> PeerManager::cleanup_peer_connections() {
-    // TODO: Change the condition to a stop flag
-    while (true) {
+    while (started_) {
         co_await asio::steady_timer(co_await this_coro::executor, duration::PEER_CLEANUP_INTERVAL)
             .async_wait(use_nothrow_awaitable);
 
@@ -169,15 +168,15 @@ awaitable<void> PeerManager::cleanup_peer_connections() {
                     break;
                 case peer::PeerState::TIMED_OUT:
                     is_reconnecting = true;
+                    // If the peer was connected (added to the connected_peers count), decrement it
+                    if (peer_connection.was_connected()) {
+                        connected_peers_.fetch_sub(1, std::memory_order_relaxed);
+                    }
                     co_spawn(
                         co_await this_coro::executor,
                         try_reconnection(it->first, peer_connection, is_reconnecting),
                         asio::detached
                     );
-                    // If the peer was connected (added to the connected_peers count), decrement it
-                    if (peer_connection.was_connected()) {
-                        connected_peers_.fetch_sub(1, std::memory_order_relaxed);
-                    }
                     break;
                 default:
                     ++it;

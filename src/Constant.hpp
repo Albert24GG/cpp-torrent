@@ -14,6 +14,10 @@ inline constexpr uint32_t BLOCK_SIZE{1ULL << 14U};
 
 inline constexpr uint32_t TRACKER_NUM_WANT{100U};
 
+inline constexpr uint32_t TARGET_PEER_COUNT{30U};
+
+inline constexpr uint32_t MAX_PEER_COUNT{50U};
+
 inline constexpr size_t MAX_MEMPOOL_SIZE{1ULL << 29U};  // 512MB
 
 namespace peer {

@@ -94,7 +94,8 @@ void TorrentClient::start_download() {
     while (!piece_manager_->completed_thread_safe()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-        if (std::chrono::steady_clock::now() >= next_request_time) {
+        if (std::chrono::steady_clock::now() >= next_request_time &&
+            peer_manager_->get_connected_peers() < TARGET_PEER_COUNT) {
             peers = peer_retriever_->retrieve_peers(piece_manager_->get_downloaded_bytes());
             if (peers.has_value()) {
                 peer_manager_->add_peers(*peers);

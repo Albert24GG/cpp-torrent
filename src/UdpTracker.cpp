@@ -1,5 +1,7 @@
 #include "UdpTracker.hpp"
 
+#include "Constant.hpp"
+#include "Duration.hpp"
 #include "Error.hpp"
 #include "Logger.hpp"
 #include "Utils.hpp"
@@ -27,9 +29,6 @@ using namespace asio::experimental::awaitable_operators;
 namespace this_coro = asio::this_coro;
 using asio::awaitable;
 using asio::ip::udp;
-
-constexpr inline auto     UDP_TRACKER_TIMEOUT{std::chrono::seconds(60)};
-constexpr inline uint32_t UDP_TRACKER_NUM_WANT{50U};
 
 namespace {
 
@@ -90,7 +89,7 @@ auto UdpTracker::send_connect_request(udp::socket& socket, const udp::endpoint& 
     udp::endpoint sender_endpoint;
 
     if (auto res = co_await utils::udp::receive_data_with_timeout(
-            socket, connect_buffer, sender_endpoint, UDP_TRACKER_TIMEOUT
+            socket, connect_buffer, sender_endpoint, duration::UDP_TRACKER_TIMEOUT
         );
         !res.has_value()) {
         co_return std::unexpected(res.error());
@@ -180,7 +179,11 @@ auto UdpTracker::send_announce_request(
 
     // Receive the announce response
     if (auto res = co_await utils::udp::receive_data_with_timeout(
-            socket, announce_buffer, sender_endpoint, UDP_TRACKER_TIMEOUT, std::ref(bytes_received)
+            socket,
+            announce_buffer,
+            sender_endpoint,
+            duration::UDP_TRACKER_TIMEOUT,
+            std::ref(bytes_received)
         );
         !res.has_value()) {
         co_return std::unexpected(res.error());

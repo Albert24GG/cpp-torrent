@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Constant.hpp"
 #include "PeerInfo.hpp"
 #include "PieceManager.hpp"
 #include "TorrentMessage.hpp"
@@ -12,11 +13,6 @@
 #include <string_view>
 
 namespace torrent::peer {
-
-// Max blocks that can be requested from a peer at a time
-inline constexpr auto MAX_BLOCKS_IN_FLIGHT{10U};
-inline constexpr auto MAX_BLOCKS_PER_REQUEST{5U};
-inline constexpr auto MAX_RETRIES{3U};
 
 enum class PeerState { UNINITIATED, CONNECTING, CONNECTED, RUNNING, DISCONNECTED, TIMED_OUT };
 

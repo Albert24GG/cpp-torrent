@@ -10,12 +10,9 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace torrent {
-
-inline constexpr auto TRACKER_TIMEOUT{std::chrono::seconds(60)};
 
 class HttpTracker final : public ITracker {
     public:

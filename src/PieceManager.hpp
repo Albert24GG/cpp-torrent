@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Constant.hpp"
 #include "Duration.hpp"
 #include "FileManager.hpp"
 #include "FixedSizeAllocator.hpp"
@@ -18,8 +19,6 @@
 #include <vector>
 
 namespace torrent {
-
-inline constexpr size_t MAX_MEMPOOL_SIZE{1ULL << 29U};  // 512MB
 
 class PieceManager {
     public:

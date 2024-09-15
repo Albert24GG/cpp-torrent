@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Constant.hpp"
 #include "Duration.hpp"
 #include "TorrentClient.hpp"
 
@@ -9,19 +10,12 @@
 
 namespace torrent::ui {
 
-constexpr inline size_t PROGRESS_BAR_WIDTH{50U};
-
 class ProgressBar {
     public:
         explicit ProgressBar(TorrentClient& torrent_client)
             : bar_(
                   indicators::option::BarWidth{PROGRESS_BAR_WIDTH},
-                  indicators::option::Start{"["},
-                  indicators::option::End{"]"},
-                  indicators::option::FontStyles{
-                      std::vector<indicators::FontStyle>{indicators::FontStyle::bold}
-                  },
-                  indicators::option::PostfixText{"Initializing..."}
+                  indicators::option::PostfixText{PROGRESS_BAR_INIT_TEXT}
               ),
               torrent_client_{torrent_client} {}
 

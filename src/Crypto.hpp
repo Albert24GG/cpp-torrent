@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Constant.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -7,8 +9,6 @@
 #include <span>
 
 namespace torrent::crypto {
-
-inline constexpr auto SHA1_SIZE = 20;
 
 class Sha1 {
     public:

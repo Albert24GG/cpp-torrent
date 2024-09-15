@@ -1,20 +1,18 @@
 #pragma once
 
+#include "Constant.hpp"
 #include "Duration.hpp"
 #include "FixedSizeAllocator.hpp"
 #include "Utils.hpp"
 
 #include <chrono>
 #include <cstddef>
-#include <numeric>
 #include <optional>
 #include <ranges>
 #include <span>
 #include <vector>
 
 namespace torrent {
-
-inline constexpr uint32_t BLOCK_SIZE{1ULL << 14U};
 
 class Piece {
     public:

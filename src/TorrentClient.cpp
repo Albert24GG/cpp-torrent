@@ -1,5 +1,6 @@
 #include "TorrentClient.hpp"
 
+#include "Constant.hpp"
 #include "Error.hpp"
 #include "FileManager.hpp"
 #include "Logger.hpp"
@@ -9,14 +10,13 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <memory>
 #include <string>
 #include <thread>
 
 namespace torrent {
-
-static constexpr std::string CLIENT_ID_BASE{"-qB4650-"};
 
 TorrentClient::TorrentClient(
     std::filesystem::path torrent_file, std::filesystem::path output_dir, uint16_t port
@@ -43,9 +43,7 @@ TorrentClient::TorrentClient(
 
     // Generate the client ID
     std::string client_id{
-        CLIENT_ID_BASE + std::to_string(utils::generate_random<uint64_t>(
-                             static_cast<uint64_t>(1e11), static_cast<uint64_t>(1e12) - 1
-                         ))
+        std::format("{}{}", CLIENT_ID_BASE, utils::generate_random<uint64_t>(1e11, 1e12 - 1))
     };
 
     peer_manager_ = std::make_shared<PeerManager>(piece_manager_, torrent_md_.info_hash, client_id);

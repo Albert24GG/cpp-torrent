@@ -20,7 +20,7 @@ void PieceManager::update_pieces_availability(const std::vector<bool>& bitfield,
         set_bits += static_cast<size_t>(cur_piece_avail);
     }
     // Require resorting if the number of set bits changed
-    are_pieces_sorted_ = (set_bits == 0);
+    are_pieces_sorted_ &= (set_bits == 0);
 }
 
 void PieceManager::add_available_piece(uint32_t piece_index) {

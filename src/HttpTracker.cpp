@@ -1,6 +1,7 @@
 #include "HttpTracker.hpp"
 
 #include "Bencode.hpp"
+#include "Constant.hpp"
 #include "Logger.hpp"
 #include "PeerInfo.hpp"
 #include "Utils.hpp"
@@ -71,7 +72,8 @@ std::optional<std::vector<PeerInfo>> HttpTracker::retrieve_peers(
             {"uploaded", std::to_string(uploaded)},
             {"downloaded", std::to_string(downloaded)},
             {"left", std::to_string(torrent_size_ - downloaded)},
-            {"compact", compact_ ? "1" : "0"}
+            {"compact", compact_ ? "1" : "0"},
+            {"numwant", std::to_string(TRACKER_NUM_WANT)}
         }
     );
 

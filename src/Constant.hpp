@@ -12,7 +12,7 @@ inline constexpr std::string_view CLIENT_ID_BASE{"-qB4650-"};
 
 inline constexpr uint32_t BLOCK_SIZE{1ULL << 14U};
 
-inline constexpr uint32_t UDP_TRACKER_NUM_WANT{50U};
+inline constexpr uint32_t TRACKER_NUM_WANT{100U};
 
 inline constexpr size_t MAX_MEMPOOL_SIZE{1ULL << 29U};  // 512MB
 

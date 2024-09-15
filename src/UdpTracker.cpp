@@ -118,7 +118,7 @@ auto UdpTracker::send_announce_request(
     udp::socket& socket, const udp::endpoint& tracker_endpoint, uint64_t connection_id
 ) -> awaitable<std::expected<std::vector<PeerInfo>, std::error_code>> {
     // Create the announce buffer
-    static std::vector<std::byte> announce_buffer(std::max(98U, 20 + 6 * UDP_TRACKER_NUM_WANT));
+    static std::vector<std::byte> announce_buffer(std::max(98U, 20 + 6 * TRACKER_NUM_WANT));
 
     *reinterpret_cast<uint64_t*>(announce_buffer.data()) =
         utils::host_to_network_order(connection_id);
@@ -162,7 +162,7 @@ auto UdpTracker::send_announce_request(
     *reinterpret_cast<uint32_t*>(announce_buffer.data() + 88) = 0;
 
     *reinterpret_cast<int32_t*>(announce_buffer.data() + 92) =
-        utils::host_to_network_order(static_cast<uint32_t>(UDP_TRACKER_NUM_WANT));
+        utils::host_to_network_order(static_cast<uint32_t>(TRACKER_NUM_WANT));
 
     *reinterpret_cast<uint16_t*>(announce_buffer.data() + 96) =
         utils::host_to_network_order(torr_client_port_);

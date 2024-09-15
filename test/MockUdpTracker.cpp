@@ -6,7 +6,6 @@
 #include <asio/experimental/as_tuple.hpp>
 #include <asio/experimental/awaitable_operators.hpp>
 #include <cstddef>
-#include <iostream>
 #include <ranges>
 #include <span>
 
@@ -43,11 +42,13 @@ std::span<std::byte> MockUdpTracker::get_announce_response(
     *reinterpret_cast<uint32_t*>(response_buffer.data() + 4) =
         utils::host_to_network_order(transaction_id);
 
-    *reinterpret_cast<uint32_t*>(response_buffer.data() + 8) = interval;
+    *reinterpret_cast<uint32_t*>(response_buffer.data() + 8) =
+        utils::host_to_network_order(interval);
 
     *reinterpret_cast<uint32_t*>(response_buffer.data() + 12) = 0;
 
-    *reinterpret_cast<uint32_t*>(response_buffer.data() + 16) = static_cast<uint32_t>(peers.size());
+    *reinterpret_cast<uint32_t*>(response_buffer.data() + 16) =
+        utils::host_to_network_order(static_cast<uint32_t>(peers.size()));
 
     auto str_to_byte = [](std::string_view str) -> std::byte {
         uint8_t value{};

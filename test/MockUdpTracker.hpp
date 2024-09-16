@@ -17,10 +17,10 @@ class MockUdpTracker {
             uint32_t                           interval,
             uint16_t                           port
         )
-            : peers{peers_span | std::ranges::to<decltype(peers)>()},
-              info_hash{info_hash},
-              interval{interval},
-              socket{server_context, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)} {}
+            : peers_{peers_span | std::ranges::to<decltype(peers_)>()},
+              info_hash_{info_hash},
+              interval_{interval},
+              socket_{server_context_, asio::ip::udp::endpoint(asio::ip::udp::v4(), port)} {}
 
         MockUdpTracker(const MockUdpTracker&)            = delete;
         MockUdpTracker& operator=(const MockUdpTracker&) = delete;
@@ -29,8 +29,8 @@ class MockUdpTracker {
 
         void start_server();
         void stop_server() {
-            socket.close();
-            server_context.stop();
+            socket_.close();
+            server_context_.stop();
         };
 
     private:
@@ -38,13 +38,13 @@ class MockUdpTracker {
 
         std::span<std::byte> get_announce_response(uint32_t transaction_id, uint32_t num_want);
 
-        uint32_t                       interval;
-        std::vector<torrent::PeerInfo> peers;
-        torrent::crypto::Sha1          info_hash;
+        uint32_t                       interval_;
+        std::vector<torrent::PeerInfo> peers_;
+        torrent::crypto::Sha1          info_hash_;
 
-        asio::io_context      server_context;
-        asio::ip::udp::socket socket;
-        std::jthread          server_thread;
+        asio::io_context      server_context_;
+        asio::ip::udp::socket socket_;
+        std::jthread          server_thread_;
 
-        uint64_t connection_id{};
+        uint64_t connection_id_{};
 };

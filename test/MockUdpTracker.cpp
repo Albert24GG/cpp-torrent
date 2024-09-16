@@ -34,7 +34,7 @@ std::span<std::byte> MockUdpTracker::get_connect_response(
 std::span<std::byte> MockUdpTracker::get_announce_response(
     uint32_t transaction_id, uint32_t num_want
 ) {
-    static std::vector<std::byte> response_buffer(20 + 6 * peers.size());
+    static std::vector<std::byte> response_buffer(20 + 6 * peers_.size());
 
     *reinterpret_cast<uint32_t*>(response_buffer.data()) =
         utils::host_to_network_order(static_cast<uint32_t>(1));
@@ -43,12 +43,12 @@ std::span<std::byte> MockUdpTracker::get_announce_response(
         utils::host_to_network_order(transaction_id);
 
     *reinterpret_cast<uint32_t*>(response_buffer.data() + 8) =
-        utils::host_to_network_order(interval);
+        utils::host_to_network_order(interval_);
 
     *reinterpret_cast<uint32_t*>(response_buffer.data() + 12) = 0;
 
     *reinterpret_cast<uint32_t*>(response_buffer.data() + 16) =
-        utils::host_to_network_order(static_cast<uint32_t>(peers.size()));
+        utils::host_to_network_order(static_cast<uint32_t>(peers_.size()));
 
     auto str_to_byte = [](std::string_view str) -> std::byte {
         uint8_t value{};
@@ -57,7 +57,7 @@ std::span<std::byte> MockUdpTracker::get_announce_response(
         return static_cast<std::byte>(value);
     };
 
-    for (auto const& [index, peer] : std::views::enumerate(peers)) {
+    for (auto const& [index, peer] : std::views::enumerate(peers_)) {
         {
             std::string ip{peer.ip};
             uint16_t    port{peer.port};
@@ -76,13 +76,13 @@ std::span<std::byte> MockUdpTracker::get_announce_response(
         }
     }
     return {
-        response_buffer.begin(), 20 + 6 * std::min(peers.size(), static_cast<size_t>(num_want))
+        response_buffer.begin(), 20 + 6 * std::min(peers_.size(), static_cast<size_t>(num_want))
     };
 }
 
 void MockUdpTracker::start_server() {
     asio::co_spawn(
-        server_context,
+        server_context_,
         [this]() -> asio::awaitable<void> {
             for (;;) {
                 udp::endpoint remote_endpoint;
@@ -91,7 +91,7 @@ void MockUdpTracker::start_server() {
                 size_t                           received_bytes{};
 
                 if (auto res = co_await utils::udp::receive_data(
-                        socket, receive_buffer, remote_endpoint, std::ref(received_bytes)
+                        socket_, receive_buffer, remote_endpoint, std::ref(received_bytes)
                     );
                     !res.has_value()) {
                     continue;
@@ -121,10 +121,10 @@ void MockUdpTracker::start_server() {
                             *reinterpret_cast<uint32_t*>(receive_buffer.data() + 12)
                         )};
 
-                        connection_id = utils::generate_random<uint64_t>();
+                        connection_id_ = utils::generate_random<uint64_t>();
 
                         response_buffer =
-                            get_connect_response(received_transaction_id, connection_id);
+                            get_connect_response(received_transaction_id, connection_id_);
 
                         break;
                     }
@@ -146,8 +146,8 @@ void MockUdpTracker::start_server() {
                             )
                         };
 
-                        if (received_connection_id != connection_id ||
-                            received_info_hash != info_hash || received_num_want == 0) {
+                        if (received_connection_id != connection_id_ ||
+                            received_info_hash != info_hash_ || received_num_want == 0) {
                             break;
                         }
 
@@ -166,11 +166,11 @@ void MockUdpTracker::start_server() {
                     continue;
                 }
 
-                co_await utils::udp::send_data(socket, response_buffer, remote_endpoint);
+                co_await utils::udp::send_data(socket_, response_buffer, remote_endpoint);
             }
         },
         asio::detached
     );
 
-    server_thread = std::jthread([this]() { server_context.run(); });
+    server_thread_ = std::jthread([this]() { server_context_.run(); });
 }

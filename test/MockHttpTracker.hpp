@@ -21,13 +21,13 @@ class MockHttpTracker {
         MockHttpTracker(MockHttpTracker&&)                 = delete;
         MockHttpTracker& operator=(MockHttpTracker&&)      = delete;
 
-        ~MockHttpTracker() { server.stop(); }
+        ~MockHttpTracker() { server_.stop(); }
 
-        void start() { server.listen("localhost", 8'080); }
-        void wait_until_ready() { server.wait_until_ready(); }
-        void stop() { server.stop(); }
+        void start() { server_.listen("localhost", 8'080); }
+        void wait_until_ready() { server_.wait_until_ready(); }
+        void stop() { server_.stop(); }
 
     private:
-        httplib::Server server;
-        std::jthread    server_thread;
+        httplib::Server server_;
+        std::jthread    server_thread_;
 };

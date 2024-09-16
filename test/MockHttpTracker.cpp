@@ -61,7 +61,7 @@ std::string build_response(std::span<const torrent::PeerInfo>& peers, uint64_t i
 MockHttpTracker::MockHttpTracker(
     std::span<const torrent::PeerInfo> peers, torrent::crypto::Sha1 info_hash, uint64_t interval
 ) {
-    server.Get(
+    server_.Get(
         "/announce",
         [info_hash, response = build_response(peers, interval)](
             const httplib::Request& req, httplib::Response& res

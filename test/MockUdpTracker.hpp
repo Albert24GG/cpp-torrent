@@ -28,20 +28,23 @@ class MockUdpTracker {
         MockUdpTracker& operator=(MockUdpTracker&&)      = delete;
 
         void start_server();
-        void stop_server() { server_context.stop(); };
+        void stop_server() {
+            socket.close();
+            server_context.stop();
+        };
 
     private:
         std::span<std::byte> get_connect_response(uint32_t transaction_id, uint64_t connection_id);
 
         std::span<std::byte> get_announce_response(uint32_t transaction_id, uint32_t num_want);
 
-        std::jthread                   server_thread;
         uint32_t                       interval;
         std::vector<torrent::PeerInfo> peers;
         torrent::crypto::Sha1          info_hash;
 
         asio::io_context      server_context;
         asio::ip::udp::socket socket;
+        std::jthread          server_thread;
 
         uint64_t connection_id{};
 };

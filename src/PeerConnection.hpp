@@ -21,8 +21,7 @@ class PeerConnection {
         PeerConnection(
             asio::io_context& io_context, PieceManager& piece_manager, PeerInfo peer_info
         )
-            : peer_conn_ctx_{io_context},
-              socket_{io_context},
+            : socket_{io_context},
               piece_manager_{piece_manager},
               peer_info_{std::move(peer_info)} {}
 
@@ -152,7 +151,6 @@ class PeerConnection {
          */
         void reset_state();
 
-        asio::io_context&     peer_conn_ctx_;
         asio::ip::tcp::socket socket_;
         PieceManager&         piece_manager_;
         PeerInfo              peer_info_;

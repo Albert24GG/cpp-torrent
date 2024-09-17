@@ -116,14 +116,14 @@ class PeerConnection {
         /**
          * @brief Handle a message received from the peer
          */
-        asio::awaitable<void> handle_message(message::Message msg);
+        void handle_message(message::Message msg);
 
         /**
          * @brief Handle a failure in the connection
          *
          * @param ec the error code
          */
-        asio::awaitable<void> handle_failure(std::error_code ec);
+        void handle_failure(std::error_code ec);
 
         /**
          * @brief Handle a have message

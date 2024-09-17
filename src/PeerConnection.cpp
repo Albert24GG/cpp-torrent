@@ -152,7 +152,7 @@ awaitable<void> PeerConnection::send_requests() {
                 peer_info_.port,
                 res.error().message()
             );
-            co_await handle_failure(res.error());
+            handle_failure(res.error());
             co_return;
         }
 
@@ -179,7 +179,7 @@ awaitable<void> PeerConnection::receive_messages() {
                 peer_info_.port,
                 res.error().message()
             );
-            co_await handle_failure(res.error());
+            handle_failure(res.error());
             co_return;
         }
 
@@ -204,7 +204,7 @@ awaitable<void> PeerConnection::receive_messages() {
                 peer_info_.port,
                 res.error().message()
             );
-            co_await handle_failure(res.error());
+            handle_failure(res.error());
             co_return;
         }
 
@@ -223,17 +223,17 @@ awaitable<void> PeerConnection::receive_messages() {
                     peer_info_.port,
                     res.error().message()
                 );
-                co_await handle_failure(res.error());
+                handle_failure(res.error());
                 co_return;
             }
         }
 
-        co_await handle_message({static_cast<message::MessageType>(id), payload});
+        handle_message({static_cast<message::MessageType>(id), payload});
     }
     co_return;
 }
 
-asio::awaitable<void> PeerConnection::handle_message(message::Message msg) {
+void PeerConnection::handle_message(message::Message msg) {
     using message::MessageType;
     switch (msg.id) {
         case MessageType::CHOKE:
@@ -241,10 +241,6 @@ asio::awaitable<void> PeerConnection::handle_message(message::Message msg) {
             break;
         case MessageType::UNCHOKE:
             peer_choking_ = false;
-            break;
-        case MessageType::INTERESTED:
-            break;
-        case MessageType::NOT_INTERESTED:
             break;
         case MessageType::HAVE:
             handle_have_message(*msg.payload);
@@ -258,7 +254,6 @@ asio::awaitable<void> PeerConnection::handle_message(message::Message msg) {
             handle_piece_message(*msg.payload);
             break;
     }
-    co_return;
 }
 
 void PeerConnection::handle_have_message(std::span<std::byte> payload) {
@@ -287,13 +282,11 @@ void PeerConnection::handle_piece_message(std::span<std::byte> payload) {
     --pending_block_requests_;
 }
 
-asio::awaitable<void> PeerConnection::handle_failure(std::error_code ec) {
+void PeerConnection::handle_failure(std::error_code ec) {
     // Set the state appropriately
     state_ = ec == asio::error::timed_out ? PeerState::TIMED_OUT : PeerState::DISCONNECTED;
     // Close the socket
     socket_.close();
-
-    co_return;
 }
 
 void PeerConnection::reset_state() {
@@ -331,7 +324,7 @@ awaitable<void> PeerConnection::connect(
             peer_info_.port,
             res.error().message()
         );
-        co_await handle_failure(res.error());
+        handle_failure(res.error());
         co_return;
     }
 
@@ -344,7 +337,7 @@ awaitable<void> PeerConnection::connect(
             peer_info_.port,
             res.error().message()
         );
-        co_await handle_failure(res.error());
+        handle_failure(res.error());
         co_return;
     }
 
@@ -357,13 +350,13 @@ awaitable<void> PeerConnection::connect(
             peer_info_.port,
             res.error().message()
         );
-        co_await handle_failure(res.error());
+        handle_failure(res.error());
         co_return;
     } else if (*res != info_hash) {
         LOG_DEBUG(
             "Received invalid handshake message from peer {}:{}", peer_info_.ip, peer_info_.port
         );
-        co_await handle_failure(asio::error::invalid_argument);
+        handle_failure(asio::error::invalid_argument);
         co_return;
     }
 
@@ -400,7 +393,7 @@ awaitable<void> PeerConnection::run() {
             peer_info_.port,
             res.error().message()
         );
-        co_await handle_failure(res.error());
+        handle_failure(res.error());
         co_return;
     }
 

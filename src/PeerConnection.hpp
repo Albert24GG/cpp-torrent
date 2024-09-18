@@ -151,6 +151,11 @@ class PeerConnection {
          */
         void reset_state();
 
+        /**
+         * @brief Refresh the pending requests by removing the blocks that have timed out
+         */
+        void refresh_pending_requests();
+
         asio::ip::tcp::socket socket_;
         PieceManager&         piece_manager_;
         PeerInfo              peer_info_;
@@ -180,7 +185,17 @@ class PeerConnection {
 
         std::vector<bool> bitfield_;
 
-        uint32_t pending_block_requests_{0U};
+        struct {
+                // The info of the pending blocks in form of
+                // ((piece_index, block_offset),request_time) The size of this vector should be at
+                // most MAX_BLOCKS_IN_FLIGHT
+                std::vector<
+                    std::pair<std::pair<uint32_t, uint32_t>, std::chrono::steady_clock::time_point>>
+                    blocks_info;
+                // The number of blocks in flight
+                uint32_t count{0};
+
+        } pending_requests_;
 };
 
 };  // namespace torrent::peer

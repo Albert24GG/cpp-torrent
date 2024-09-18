@@ -1,5 +1,6 @@
 #include "PeerConnection.hpp"
 
+#include "Constant.hpp"
 #include "Crypto.hpp"
 #include "Duration.hpp"
 #include "Logger.hpp"
@@ -120,10 +121,30 @@ uint32_t PeerConnection::load_block_requests(uint32_t num_blocks) {
             block_size
         );
 
+        // Add the block info to the pending requests
+        pending_requests_.blocks_info[pending_requests_.count++] = {
+            {piece_index, block_offset}, std::chrono::steady_clock::now()
+        };
+
         ++blocks_requested;
     }
 
     return blocks_requested;
+}
+
+void PeerConnection::refresh_pending_requests() {
+    for (uint32_t i{0U}; i < pending_requests_.count;) {
+        auto [block_info, request_time] = pending_requests_.blocks_info[i];
+        if (request_time + duration::REQUEST_TIMEOUT >= std::chrono::steady_clock::now()) {
+            std::swap(
+                pending_requests_.blocks_info[i],
+                pending_requests_.blocks_info[pending_requests_.count - 1]
+            );
+            --pending_requests_.count;
+        } else {
+            ++i;
+        }
+    }
 }
 
 awaitable<void> PeerConnection::send_requests() {
@@ -134,8 +155,11 @@ awaitable<void> PeerConnection::send_requests() {
             continue;
         }
 
+        refresh_pending_requests();
+
         auto requested_blocks = load_block_requests(
-            std::min(MAX_BLOCKS_IN_FLIGHT - pending_block_requests_, MAX_BLOCKS_PER_REQUEST)
+            (MAX_BLOCKS_IN_FLIGHT >= MAX_BLOCKS_PER_REQUEST + pending_requests_.count) *
+            MAX_BLOCKS_PER_REQUEST
         );
 
         if (requested_blocks == 0) {
@@ -155,8 +179,6 @@ awaitable<void> PeerConnection::send_requests() {
             handle_failure(res.error());
             co_return;
         }
-
-        pending_block_requests_ += requested_blocks;
     }
     co_return;
 }
@@ -279,7 +301,23 @@ void PeerConnection::handle_piece_message(std::span<std::byte> payload) {
     }
     auto [piece_index, block_data, block_offset] = *parsed_message;
     piece_manager_.receive_block(piece_index, block_data, block_offset);
-    --pending_block_requests_;
+
+    if (pending_requests_.count == 0U) {
+        return;
+    }
+
+    std::pair<uint32_t, uint32_t> block_info{piece_index, block_offset};
+
+    for (auto i : std::views::iota(0U, pending_requests_.count)) {
+        if (pending_requests_.blocks_info[i].first == block_info) {
+            std::swap(
+                pending_requests_.blocks_info[i],
+                pending_requests_.blocks_info[pending_requests_.count - 1]
+            );
+            --pending_requests_.count;
+            break;
+        }
+    }
 }
 
 void PeerConnection::handle_failure(std::error_code ec) {
@@ -295,9 +333,10 @@ void PeerConnection::reset_state() {
     am_interested_          = false;
     peer_choking_           = true;
     peer_interested_        = false;
-    pending_block_requests_ = 0;
-    bitfield_received_      = false;
-    was_connected_          = false;
+    pending_requests_.count = 0;
+    pending_requests_.blocks_info.clear();
+    bitfield_received_ = false;
+    was_connected_     = false;
 }
 
 awaitable<void> PeerConnection::connect(
@@ -404,6 +443,9 @@ awaitable<void> PeerConnection::run() {
     // Resize the bitfield
 
     bitfield_.resize(piece_manager_.get_piece_count());
+
+    // Resize the pending requests
+    pending_requests_.blocks_info.resize(MAX_BLOCKS_IN_FLIGHT);
 
     // Resize the receive buffer to the max size of a payload received at once
     // (either a piece msg or bitfield msg)

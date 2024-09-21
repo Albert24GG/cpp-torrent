@@ -174,4 +174,30 @@ void create_request_message(
     serialize_message({MessageType::REQUEST, request_payload}, buffer);
 }
 
+void create_cancel_message(
+    std::span<std::byte> buffer, uint32_t piece_index, uint32_t offset, uint32_t length
+) {
+    static std::array<std::byte, 12> request_payload{};
+
+    auto to_network_order_span = [](uint32_t& value) -> std::span<std::byte, 4> {
+        value = utils::host_to_network_order(value);
+        return std::span<std::byte, 4>(reinterpret_cast<std::byte*>(&value), 4);
+    };
+
+    // Set the piece index
+    std::ranges::copy(to_network_order_span(piece_index), std::begin(request_payload));
+
+    // Set the offset
+    std::ranges::copy(
+        to_network_order_span(offset), std::begin(request_payload | std::views::drop(4))
+    );
+
+    // Set the length
+    std::ranges::copy(
+        to_network_order_span(length), std::begin(request_payload | std::views::drop(8))
+    );
+
+    serialize_message({MessageType::CANCEL, request_payload}, buffer);
+}
+
 }  // namespace torrent::message

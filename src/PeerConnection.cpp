@@ -99,11 +99,162 @@ auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std
     co_return connection_result;
 }
 
+uint32_t PeerConnection::endgame_load_block_requests(uint32_t num_blocks) {
+    // Reset the buffer
+    send_buffer_.clear();
+
+    uint32_t blocks_requested{0U};
+
+    for (auto i : std::views::iota(0U, num_blocks)) {
+        if (endgame_remaining_blocks_.empty()) {
+            break;
+        }
+        auto [piece_index, block_offset, block_size] = endgame_remaining_blocks_.front();
+
+        send_buffer_.insert(send_buffer_.end(), 17, std::byte{0});
+
+        message::create_request_message(
+            std::span<std::byte>(send_buffer_).subspan(i * 17U, 17),
+            piece_index,
+            block_offset,
+            block_size
+        );
+
+        // Add the block info to the pending requests
+        pending_requests_.blocks_info[pending_requests_.count++] = {
+            {piece_index, block_offset, block_size}, std::chrono::steady_clock::now()
+        };
+
+        ++blocks_requested;
+
+        // Remove the block from the endgame remaining blocks
+        std::swap(endgame_remaining_blocks_.front(), endgame_remaining_blocks_.back());
+        endgame_remaining_blocks_.pop_back();
+    }
+
+    return blocks_requested;
+}
+
+uint32_t PeerConnection::endgame_refresh_pending_requests() {
+    send_buffer_.clear();
+
+    uint32_t blocks_cancelled{0U};
+
+    // Remove the received blocks from endgame_remaining_blocks_
+    for (uint32_t i{0U}; i < endgame_remaining_blocks_.size();) {
+        auto [piece_idx, block_offset, block_size] = endgame_remaining_blocks_[i];
+
+        if (piece_manager_.is_block_received(piece_idx, block_offset)) {
+            std::swap(endgame_remaining_blocks_[i], endgame_remaining_blocks_.back());
+            endgame_remaining_blocks_.pop_back();
+        } else {
+            ++i;
+        }
+    }
+
+    // Resolve the pending blocks
+    for (uint32_t i{0U}; i < pending_requests_.count;) {
+        auto [block_info, request_time] = pending_requests_.blocks_info[i];
+
+        auto [piece_idx, block_offset, block_size] = block_info;
+
+        if (piece_manager_.is_block_received(piece_idx, block_offset)) {
+            std::swap(
+                pending_requests_.blocks_info[i],
+                pending_requests_.blocks_info[pending_requests_.count - 1]
+            );
+            --pending_requests_.count;
+            send_buffer_.insert(send_buffer_.end(), 17, std::byte{0});
+            message::create_cancel_message(
+                std::span<std::byte>(send_buffer_).subspan(blocks_cancelled * 17U, 17),
+                piece_idx,
+                block_offset,
+                block_size
+            );
+            ++blocks_cancelled;
+        } else if (request_time + duration::REQUEST_TIMEOUT >= std::chrono::steady_clock::now()) {
+            endgame_remaining_blocks_.push_back(std::move(block_info));
+            std::swap(
+                pending_requests_.blocks_info[i],
+                pending_requests_.blocks_info[pending_requests_.count - 1]
+            );
+            --pending_requests_.count;
+        } else {
+            ++i;
+        }
+    }
+
+    return blocks_cancelled;
+}
+
+awaitable<void> PeerConnection::endgame_send_requests() {
+    endgame_remaining_blocks_ = piece_manager_.endgame_remaining_blocks(bitfield_);
+
+    if (endgame_remaining_blocks_.empty()) {
+        co_return;
+    }
+
+    // Shuffle the blocks
+    std::random_device rd;
+    std::mt19937       gen(rd());
+
+    std::ranges::shuffle(endgame_remaining_blocks_, gen);
+
+    while (!piece_manager_.completed()) {
+        co_await asio::steady_timer(co_await this_coro::executor, duration::REQUEST_INTERVAL)
+            .async_wait(use_nothrow_awaitable);
+        if (peer_choking_) {
+            continue;
+        }
+
+        uint32_t blocks_cancelled{endgame_refresh_pending_requests()};
+
+        if (blocks_cancelled > 0) {
+            if (auto res = co_await utils::tcp::send_data_with_timeout(
+                    socket_, send_buffer_, duration::SEND_MSG_TIMEOUT
+                );
+                !res.has_value()) {
+                LOG_DEBUG(
+                    "Failed to send cancel messages to peer {}:{} with error:\n{}",
+                    peer_info_.ip,
+                    peer_info_.port,
+                    res.error().message()
+                );
+                handle_failure(res.error());
+                co_return;
+            }
+        }
+
+        auto requested_blocks = endgame_load_block_requests(
+            std::min(MAX_BLOCKS_IN_FLIGHT - pending_requests_.count, MAX_BLOCKS_PER_REQUEST)
+        );
+
+        if (requested_blocks == 0) {
+            continue;
+        }
+
+        if (auto res = co_await utils::tcp::send_data_with_timeout(
+                socket_, send_buffer_, duration::SEND_MSG_TIMEOUT
+            );
+            !res.has_value()) {
+            LOG_DEBUG(
+                "Failed to send request message to peer {}:{} with error:\n{}",
+                peer_info_.ip,
+                peer_info_.port,
+                res.error().message()
+            );
+            handle_failure(res.error());
+            co_return;
+        }
+    }
+    co_return;
+}
+
 uint32_t PeerConnection::load_block_requests(uint32_t num_blocks) {
     // Reset the buffer
     send_buffer_.clear();
 
-    uint32_t blocks_requested{};
+    uint32_t blocks_requested{0U};
 
     for (auto i : std::views::iota(0U, num_blocks)) {
         auto request = piece_manager_.request_next_block(bitfield_);
@@ -123,7 +274,7 @@ uint32_t PeerConnection::load_block_requests(uint32_t num_blocks) {
 
         // Add the block info to the pending requests
         pending_requests_.blocks_info[pending_requests_.count++] = {
-            {piece_index, block_offset}, std::chrono::steady_clock::now()
+            std::move(*request), std::chrono::steady_clock::now()
         };
 
         ++blocks_requested;
@@ -153,6 +304,11 @@ awaitable<void> PeerConnection::send_requests() {
             .async_wait(use_nothrow_awaitable);
         if (peer_choking_) {
             continue;
+        }
+
+        if (piece_manager_.is_endgame()) {
+            co_await endgame_send_requests();
+            co_return;
         }
 
         refresh_pending_requests();
@@ -306,7 +462,9 @@ void PeerConnection::handle_piece_message(std::span<std::byte> payload) {
         return;
     }
 
-    std::pair<uint32_t, uint32_t> block_info{piece_index, block_offset};
+    std::tuple<uint32_t, uint32_t, uint32_t> block_info{
+        piece_index, block_offset, block_data.size()
+    };
 
     for (auto i : std::views::iota(0U, pending_requests_.count)) {
         if (pending_requests_.blocks_info[i].first == block_info) {

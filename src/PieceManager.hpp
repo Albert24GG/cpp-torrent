@@ -8,6 +8,7 @@
 #include "Utils.hpp"
 
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -127,6 +128,38 @@ class PieceManager {
             return (pieces_cnt_ - pieces_left_.load(std::memory_order_acquire)) * piece_size_;
         }
 
+        /**
+         * @brief Check if a block has been received
+         *
+         * @param piece_index Index of the piece
+         * @param block_offset Offset of the block in the piece
+         * @return True if the block has been received
+         */
+        bool is_block_received(uint32_t piece_index, uint32_t block_offset) const {
+            assert(piece_index < pieces_cnt_ && "Piece index out of bounds");
+            return piece_completed_[piece_index] ||
+                   (requested_pieces_.contains(piece_index) &&
+                    requested_pieces_.at(piece_index)
+                        .is_block_received(Piece::get_block_index(block_offset)));
+        }
+
+        /**
+         * @brief Get the blocks that have not been received yet
+         *        This function is used in the endgame mode
+         *
+         * @param bitfield Bitfield of the peer
+         * @return A vector containing tuples in the form (piece index, block offset, block size)
+         */
+        auto endgame_remaining_blocks(const std::vector<bool>& bitfield
+        ) const -> std::vector<std::tuple<uint32_t, uint32_t, uint32_t>>;
+
+        /**
+         * @brief Check if we are in the endgame mode
+         *
+         * @return True if we are in the endgame mode
+         */
+        bool is_endgame() const { return endgame_; }
+
     private:
         /**
          * @brief Update the availability of pieces
@@ -139,7 +172,7 @@ class PieceManager {
         size_t                           max_active_requests_;
         uint32_t                         piece_size_;
         size_t                           torrent_size_;
-        size_t                           pieces_cnt_;
+        const size_t                     pieces_cnt_;
         std::atomic<size_t>              pieces_left_;
         std::chrono::milliseconds        block_request_timeout_;
         std::shared_ptr<fs::FileManager> file_manager_;
@@ -160,6 +193,10 @@ class PieceManager {
 
         // Atomic flag that indicates completion of the download
         std::atomic_flag completion_flag_{ATOMIC_FLAG_INIT};
+
+        // Flag that indicates if we entered the endgame mode
+        bool                                                  endgame_{false};
+        std::vector<std::tuple<uint32_t, uint32_t, uint32_t>> endgame_requests_;
 };
 
 }  // namespace torrent

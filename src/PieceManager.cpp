@@ -97,9 +97,24 @@ void PieceManager::receive_block(
     requested_pieces_.erase(piece_index);
 }
 
+auto PieceManager::endgame_remaining_blocks(const std::vector<bool>& bitfield
+) const -> std::vector<std::tuple<uint32_t, uint32_t, uint32_t>> {
+    if (!endgame_) {
+        return {};
+    }
+
+    return {
+        endgame_requests_ |
+        std::views::filter([&bitfield](const std::tuple<uint32_t, uint32_t, uint32_t>& block) {
+            return bitfield[std::get<0>(block)];
+        }) |
+        std::ranges::to<std::vector<std::tuple<uint32_t, uint32_t, uint32_t>>>()
+    };
+}
+
 auto PieceManager::request_next_block(const std::vector<bool>& bitfield
 ) -> std::optional<std::tuple<uint32_t, uint32_t, uint32_t>> {
-    if (this->completed()) {
+    if (completed()) {
         LOG_DEBUG("No more blocks to download");
         return std::nullopt;
     }
@@ -140,6 +155,34 @@ auto PieceManager::request_next_block(const std::vector<bool>& bitfield
         auto [offset, block_size] = *block_info;
 
         return std::make_tuple(piece_idx, offset, block_size);
+    }
+
+    // If all the pieces have been requested, check if all blocks have been requested and enter
+    // endgame mode
+    if (!endgame_ && pieces_left_.load(std::memory_order_acquire) == requested_pieces_.size()) {
+        bool enter_endgame{true};
+        for (const auto& [piece_idx, piece] : requested_pieces_) {
+            if (piece.get_unreq_blocks_cnt() > 0) {
+                enter_endgame = false;
+                break;
+            }
+        }
+        endgame_ = enter_endgame;
+        if (endgame_) {
+            LOG_INFO("Entering endgame mode");
+            // fetch all the blocks that have not been received
+            for (auto& [piece_idx, piece] : requested_pieces_) {
+                std::ranges::copy(
+                    piece.get_remaining_blocks(
+                    ) | std::views::transform([piece_idx](uint16_t block_idx) {
+                        return std::make_tuple(
+                            piece_idx, Piece::get_block_offset(block_idx), Piece::get_block_size()
+                        );
+                    }),
+                    std::back_inserter(endgame_requests_)
+                );
+            }
+        }
     }
 
     return std::nullopt;

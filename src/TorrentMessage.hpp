@@ -94,4 +94,16 @@ void create_request_message(
     std::span<std::byte> buffer, uint32_t piece_index, uint32_t offset, uint32_t length
 );
 
+/**
+ * @brief Create a cancel message
+ *
+ * @param buffer The buffer where the message will be written
+ * @param piece_index The index of the piece
+ * @param offset The offset of the block
+ * @param length The length of the block
+ */
+void create_cancel_message(
+    std::span<std::byte> buffer, uint32_t piece_index, uint32_t offset, uint32_t length
+);
+
 };  // namespace torrent::message

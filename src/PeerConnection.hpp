@@ -103,9 +103,34 @@ class PeerConnection {
         uint32_t load_block_requests(uint32_t num_blocks);
 
         /**
+         * @brief Same as load_block_requests but for endgame mode
+         */
+        uint32_t endgame_load_block_requests(uint32_t num_blocks);
+
+        /**
+         * @brief Refresh the pending requests by removing the blocks that have timed out
+         */
+        void refresh_pending_requests();
+
+        /**
+         * @brief Same as refresh_pending_requests but for endgame mode
+         *
+         * The function also adds cancel request to the send buffer for the blocks that have
+         * received from other peers
+         *
+         * @return the number of requests that need to be cancelled
+         */
+        uint32_t endgame_refresh_pending_requests();
+
+        /**
          * @brief Send the next block requests to the peer
          */
         asio::awaitable<void> send_requests();
+
+        /**
+         * @brief Same as send_requests but for endgame mode
+         */
+        asio::awaitable<void> endgame_send_requests();
 
         /**
          * @brief Receive messages from the peer
@@ -151,11 +176,6 @@ class PeerConnection {
          */
         void reset_state();
 
-        /**
-         * @brief Refresh the pending requests by removing the blocks that have timed out
-         */
-        void refresh_pending_requests();
-
         asio::ip::tcp::socket socket_;
         PieceManager&         piece_manager_;
         PeerInfo              peer_info_;
@@ -187,15 +207,18 @@ class PeerConnection {
 
         struct {
                 // The info of the pending blocks in form of
-                // ((piece_index, block_offset),request_time) The size of this vector should be at
-                // most MAX_BLOCKS_IN_FLIGHT
-                std::vector<
-                    std::pair<std::pair<uint32_t, uint32_t>, std::chrono::steady_clock::time_point>>
+                // ((piece_index, block_offset, block_size), request_time)
+                // The size of this vector should be at most MAX_BLOCKS_IN_FLIGHT
+                std::vector<std::pair<
+                    std::tuple<uint32_t, uint32_t, uint32_t>,
+                    std::chrono::steady_clock::time_point>>
                     blocks_info;
                 // The number of blocks in flight
                 uint32_t count{0};
 
         } pending_requests_;
+
+        std::vector<std::tuple<uint32_t, uint32_t, uint32_t>> endgame_remaining_blocks_;
 };
 
 };  // namespace torrent::peer

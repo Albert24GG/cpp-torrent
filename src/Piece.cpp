@@ -14,7 +14,7 @@ void Piece::receive_block(std::span<const std::byte> block, size_t offset) {
         return;
     }
 
-    std::ranges::copy(block, std::begin(piece_data_ | std::views::drop(offset)));
+    std::ranges::copy(block, std::ranges::begin(piece_data_ | std::views::drop(offset)));
 
     // mark the block as received by moving it to the end of the remaining blocks vector
     auto swapped_block{remaining_blocks_[blocks_left_ - 1]};

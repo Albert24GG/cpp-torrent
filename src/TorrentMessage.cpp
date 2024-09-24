@@ -37,7 +37,7 @@ HandshakeMessage create_handshake_message(
     // Set the info hash
     std::ranges::copy(
         std::as_bytes(info_hash.get()),
-        std::begin(
+        std::ranges::begin(
             handshake_message | std::views::drop(1 + PROTOCOL_IDENTIFIER_SIZE + RESERVED_SIZE) |
             std::views::take(INFO_HASH_SIZE)
         )
@@ -46,7 +46,7 @@ HandshakeMessage create_handshake_message(
     // Set the peer id
     std::ranges::copy(
         std::as_bytes(peer_id),
-        std::begin(
+        std::ranges::begin(
             handshake_message |
             std::views::drop(1 + PROTOCOL_IDENTIFIER_SIZE + RESERVED_SIZE + INFO_HASH_SIZE) |
             std::views::take(PEER_ID_SIZE)
@@ -132,7 +132,7 @@ void serialize_message(const Message& msg, std::span<std::byte> buffer) {
             std::span<const std::byte, 4>(
                 reinterpret_cast<const std::byte*>(&message_size_network), 4
             ),
-            std::begin(buffer)
+            std::ranges::begin(buffer)
         );
     }
 
@@ -144,7 +144,7 @@ void serialize_message(const Message& msg, std::span<std::byte> buffer) {
     // Copy the payload to the buffer
 
     if (msg.payload.has_value()) {
-        std::ranges::copy(*msg.payload, std::begin(buffer | std::views::drop(5)));
+        std::ranges::copy(*msg.payload, std::ranges::begin(buffer | std::views::drop(5)));
     }
 }
 
@@ -159,16 +159,16 @@ void create_request_message(
     };
 
     // Set the piece index
-    std::ranges::copy(to_network_order_span(piece_index), std::begin(request_payload));
+    std::ranges::copy(to_network_order_span(piece_index), std::ranges::begin(request_payload));
 
     // Set the offset
     std::ranges::copy(
-        to_network_order_span(offset), std::begin(request_payload | std::views::drop(4))
+        to_network_order_span(offset), std::ranges::begin(request_payload | std::views::drop(4))
     );
 
     // Set the length
     std::ranges::copy(
-        to_network_order_span(length), std::begin(request_payload | std::views::drop(8))
+        to_network_order_span(length), std::ranges::begin(request_payload | std::views::drop(8))
     );
 
     serialize_message({MessageType::REQUEST, request_payload}, buffer);
@@ -185,16 +185,16 @@ void create_cancel_message(
     };
 
     // Set the piece index
-    std::ranges::copy(to_network_order_span(piece_index), std::begin(request_payload));
+    std::ranges::copy(to_network_order_span(piece_index), std::ranges::begin(request_payload));
 
     // Set the offset
     std::ranges::copy(
-        to_network_order_span(offset), std::begin(request_payload | std::views::drop(4))
+        to_network_order_span(offset), std::ranges::begin(request_payload | std::views::drop(4))
     );
 
     // Set the length
     std::ranges::copy(
-        to_network_order_span(length), std::begin(request_payload | std::views::drop(8))
+        to_network_order_span(length), std::ranges::begin(request_payload | std::views::drop(8))
     );
 
     serialize_message({MessageType::CANCEL, request_payload}, buffer);

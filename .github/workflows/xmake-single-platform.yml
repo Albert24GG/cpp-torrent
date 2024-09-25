@@ -1,4 +1,4 @@
-name: xmake on multiple platforms
+name: xmake on ubuntu-24.04
 
 on: [push, pull_request]
 
@@ -24,3 +24,8 @@ jobs:
 
     - name: Test
       run: xmake test
+    
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true

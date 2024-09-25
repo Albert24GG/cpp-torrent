@@ -46,9 +46,7 @@ jobs:
           - os: windows-latest
             c_compiler: clang
           - os: ubuntu-24.04
-            c_compiler: clang
-            cpp_compiler: clang++
-          
+            c_compiler: clang          
 
     steps:
     - uses: actions/checkout@v4

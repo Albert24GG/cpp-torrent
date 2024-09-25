@@ -51,7 +51,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Setup upterm session
-      if: ${{ matrix.os == 'macos-latest' }}
       uses: lhotari/action-upterm@v1
       with:
         limit-access-to-actor: true 

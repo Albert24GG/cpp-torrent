@@ -46,19 +46,19 @@ jobs:
           - os: windows-latest
             c_compiler: clang
           - os: ubuntu-24.04
-            c_compiler: clang          
+            c_compiler: cl          
 
     steps:
     - uses: actions/checkout@v4
-    
-    - name: setup xmake
-      uses: xmake-io/github-action-setup-xmake@v1
-
     - name: Setup upterm session
       if: ${{ matrix.os == 'macos-latest' }}
       uses: lhotari/action-upterm@v1
       with:
         limit-access-to-actor: true 
+    
+    - name: setup xmake
+      uses: xmake-io/github-action-setup-xmake@v1
+
 
     - name: Configure xmake
       run: >

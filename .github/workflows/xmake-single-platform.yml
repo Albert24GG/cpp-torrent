@@ -1,6 +1,10 @@
 name: xmake on ubuntu-24.04
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
 
 jobs:
   build:
@@ -24,8 +28,3 @@ jobs:
 
     - name: Test
       run: xmake test
-    
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      with:
-        limit-access-to-actor: true

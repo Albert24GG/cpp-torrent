@@ -58,7 +58,7 @@ jobs:
 
     - name: Configure xmake
       run: >
-        xmake f 
+        xmake f -y 
         --cc=${{ matrix.c_compiler }}
         --cxx=${{ matrix.cpp_compiler }}
         --mode=${{ matrix.build_type }}

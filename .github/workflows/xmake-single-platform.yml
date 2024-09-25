@@ -1,0 +1,26 @@
+name: xmake on multiple platforms
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04       
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: setup xmake
+      uses: xmake-io/github-action-setup-xmake@v1
+
+    - name: Configure xmake
+      run: >
+        xmake f -y 
+        --cc=gcc-14
+        --cxx=g++-14
+        --mode=Release
+
+    - name: Build
+      run: xmake
+
+    - name: Test
+      run: xmake test

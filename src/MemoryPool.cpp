@@ -1,6 +1,7 @@
 #include "MemoryPool.hpp"
 
 #include <cstddef>
+#include <cstring>
 
 namespace torrent::utils {
 void* MemoryPool::allocate(size_t size) {
@@ -10,8 +11,8 @@ void* MemoryPool::allocate(size_t size) {
 
     if (initialized_blocks_ < block_count_) {
         size_t* ptr{reinterpret_cast<size_t*>(addr_from_index(initialized_blocks_))};
-        *ptr = initialized_blocks_ + 1;
         ++initialized_blocks_;
+        std::memcpy(ptr, &initialized_blocks_, sizeof(size_t));
     }
 
     void* return_block{nullptr};
@@ -20,7 +21,9 @@ void* MemoryPool::allocate(size_t size) {
         return_block = reinterpret_cast<void*>(next_free_block_);
         --free_blocks_;
         if (free_blocks_ > 0) {
-            next_free_block_ = addr_from_index(*reinterpret_cast<size_t*>(next_free_block_));
+            size_t next_index{};
+            std::memcpy(&next_index, next_free_block_, sizeof(size_t));
+            next_free_block_ = addr_from_index(next_index);
         } else {
             next_free_block_ = nullptr;
         }
@@ -32,9 +35,10 @@ void MemoryPool::deallocate(void* ptr) {
         return;
     }
     if (next_free_block_ != nullptr) {
-        *reinterpret_cast<size_t*>(ptr) = index_from_addr(next_free_block_);
+        size_t next_index{index_from_addr(next_free_block_)};
+        std::memcpy(ptr, &next_index, sizeof(size_t));
     } else {
-        *reinterpret_cast<size_t*>(ptr) = block_count_;
+        std::memcpy(ptr, &block_count_, sizeof(size_t));
     }
     next_free_block_ = reinterpret_cast<std::byte*>(ptr);
     ++free_blocks_;

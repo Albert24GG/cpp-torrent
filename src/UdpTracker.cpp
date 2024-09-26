@@ -49,7 +49,10 @@ auto extract_peers(std::span<std::byte> peers_buffer
             peer | std::views::take(4), std::ranges::begin(std::as_writable_bytes<uint8_t, 4>(ip))
         );
 
-        *reinterpret_cast<uint16_t*>(&port) = *reinterpret_cast<uint16_t*>(peer.data() + 4);
+        std::ranges::copy(
+            peer | std::views::drop(4) | std::views::take(2),
+            std::ranges::begin(std::span(reinterpret_cast<std::byte*>(&port), 2))
+        );
 
         // if the system is little endian, reverse the order of the bytes
         port = torrent::utils::network_to_host_order(port);
@@ -70,15 +73,31 @@ auto UdpTracker::send_connect_request(udp::socket& socket, const udp::endpoint& 
     static std::array<std::byte, 16> connect_buffer;
 
     // Set the magic numbe (protocol id)
-    *reinterpret_cast<uint64_t*>(connect_buffer.data()) =
-        utils::host_to_network_order(static_cast<uint64_t>(0x41727101980));
+    {
+        uint64_t protocol_id_no{utils::host_to_network_order(static_cast<uint64_t>(0x41727101980))};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&protocol_id_no), 8),
+            std::ranges::begin(connect_buffer)
+        );
+    }
 
     // Set the action (0 for connect)
-    *reinterpret_cast<uint32_t*>(connect_buffer.data() + 8) = 0;
+    {
+        uint32_t zero{0U};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&zero), 4),
+            std::ranges::begin(connect_buffer | std::views::drop(8))
+        );
+    }
 
     uint32_t transaction_id = utils::generate_random<uint32_t>();
-    *reinterpret_cast<uint32_t*>(connect_buffer.data() + 12) =
-        utils::host_to_network_order(transaction_id);
+    {
+        uint32_t transaction_id_no{utils::host_to_network_order(transaction_id)};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&transaction_id_no), 4),
+            std::ranges::begin(connect_buffer | std::views::drop(12))
+        );
+    }
 
     // Send the connect request
     if (auto res = co_await utils::udp::send_data(socket, connect_buffer, tracker_endpoint);
@@ -95,22 +114,31 @@ auto UdpTracker::send_connect_request(udp::socket& socket, const udp::endpoint& 
         co_return std::unexpected(res.error());
     }
 
-    uint32_t received_action{
-        utils::network_to_host_order(*reinterpret_cast<uint32_t*>(connect_buffer.data()))
-    };
+    uint32_t received_action{};
+    std::ranges::copy(
+        connect_buffer | std::views::take(4),
+        std::ranges::begin(std::span(reinterpret_cast<std::byte*>(&received_action), 4))
+    );
+    received_action = utils::network_to_host_order(received_action);
 
-    uint32_t received_transaction_id{
-        utils::network_to_host_order(*reinterpret_cast<uint32_t*>(connect_buffer.data() + 4))
-    };
+    uint32_t received_transaction_id{};
+    std::ranges::copy(
+        connect_buffer | std::views::drop(4) | std::views::take(4),
+        std::ranges::begin(std::span(reinterpret_cast<std::byte*>(&received_transaction_id), 4))
+    );
+    received_transaction_id = utils::network_to_host_order(received_transaction_id);
 
     // Check if the response is valid
     if (received_action != 0 || received_transaction_id != transaction_id) {
         co_return std::unexpected(std::make_error_code(std::errc::protocol_error));
     }
 
-    uint64_t connection_id{
-        utils::network_to_host_order(*reinterpret_cast<uint64_t*>(connect_buffer.data() + 8))
-    };
+    uint64_t connection_id{};
+    std::ranges::copy(
+        connect_buffer | std::views::drop(8) | std::views::take(8),
+        std::ranges::begin(std::span(reinterpret_cast<std::byte*>(&connection_id), 8))
+    );
+    connection_id = utils::network_to_host_order(connection_id);
     co_return connection_id;
 }
 
@@ -120,16 +148,31 @@ auto UdpTracker::send_announce_request(
     // Create the announce buffer
     static std::vector<std::byte> announce_buffer(std::max(98U, 20 + 6 * TRACKER_NUM_WANT));
 
-    *reinterpret_cast<uint64_t*>(announce_buffer.data()) =
-        utils::host_to_network_order(connection_id);
+    {
+        uint64_t connection_id_no{utils::host_to_network_order(connection_id)};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&connection_id_no), 8),
+            std::ranges::begin(announce_buffer)
+        );
+    }
 
     // Set the action (1 for announce)
-    *reinterpret_cast<uint32_t*>(announce_buffer.data() + 8) =
-        utils::host_to_network_order(static_cast<uint32_t>(1));
+    {
+        uint32_t action{utils::host_to_network_order(static_cast<uint32_t>(1U))};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&action), 4),
+            std::ranges::begin(announce_buffer | std::views::drop(8))
+        );
+    }
 
     uint32_t transaction_id{utils::generate_random<uint32_t>()};
-    *reinterpret_cast<uint32_t*>(announce_buffer.data() + 12) =
-        utils::host_to_network_order(transaction_id);
+    {
+        uint32_t transaction_id_no{utils::host_to_network_order(transaction_id)};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&transaction_id_no), 4),
+            std::ranges::begin(announce_buffer | std::views::drop(12))
+        );
+    }
 
     // Set the info hash
     std::ranges::copy(
@@ -142,30 +185,73 @@ auto UdpTracker::send_announce_request(
         std::ranges::begin(announce_buffer | std::views::drop(36))
     );
 
-    *reinterpret_cast<uint64_t*>(announce_buffer.data() + 56) =
-        utils::host_to_network_order(downloaded_);
+    {
+        uint64_t downloaded_no{utils::host_to_network_order(downloaded_)};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&downloaded_no), 8),
+            std::ranges::begin(announce_buffer | std::views::drop(56))
+        );
+    }
 
     // Set the left bytes
-    *reinterpret_cast<uint64_t*>(announce_buffer.data() + 64) =
-        utils::host_to_network_order(torrent_size_ - downloaded_);
+    {
+        uint64_t left_no{utils::host_to_network_order(torrent_size_ - downloaded_)};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&left_no), 8),
+            std::ranges::begin(announce_buffer | std::views::drop(64))
+        );
+    }
 
-    *reinterpret_cast<uint64_t*>(announce_buffer.data() + 72) =
-        utils::host_to_network_order(uploaded_);
+    {
+        uint64_t uploaded_no{utils::host_to_network_order(uploaded_)};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&uploaded_no), 8),
+            std::ranges::begin(announce_buffer | std::views::drop(72))
+        );
+    }
 
     // Set the event (0 for none)
-    *reinterpret_cast<uint32_t*>(announce_buffer.data() + 80) = 0;
+    {
+        uint32_t zero{0U};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&zero), 4),
+            std::ranges::begin(announce_buffer | std::views::drop(80))
+        );
+    }
 
     // Set the IP address (0 for default)
-    *reinterpret_cast<uint32_t*>(announce_buffer.data() + 84) = 0;
+    {
+        uint32_t zero{0U};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&zero), 4),
+            std::ranges::begin(announce_buffer | std::views::drop(84))
+        );
+    }
 
     // Set the key (0 for default)
-    *reinterpret_cast<uint32_t*>(announce_buffer.data() + 88) = 0;
+    {
+        uint32_t zero{0U};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&zero), 4),
+            std::ranges::begin(announce_buffer | std::views::drop(88))
+        );
+    }
 
-    *reinterpret_cast<int32_t*>(announce_buffer.data() + 92) =
-        utils::host_to_network_order(static_cast<uint32_t>(TRACKER_NUM_WANT));
+    {
+        uint32_t num_want_no{utils::host_to_network_order(static_cast<uint32_t>(TRACKER_NUM_WANT))};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&num_want_no), 4),
+            std::ranges::begin(announce_buffer | std::views::drop(92))
+        );
+    }
 
-    *reinterpret_cast<uint16_t*>(announce_buffer.data() + 96) =
-        utils::host_to_network_order(torr_client_port_);
+    {
+        uint16_t port_no{utils::host_to_network_order(torr_client_port_)};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&port_no), 2),
+            std::ranges::begin(announce_buffer | std::views::drop(96))
+        );
+    }
 
     // Send the announce request
     if (auto res = co_await utils::udp::send_data(socket, announce_buffer, tracker_endpoint);
@@ -193,16 +279,26 @@ auto UdpTracker::send_announce_request(
         co_return std::unexpected(std::make_error_code(std::errc::protocol_error));
     }
 
-    uint32_t received_action{
-        utils::network_to_host_order(*reinterpret_cast<uint32_t*>(announce_buffer.data()))
-    };
-    uint32_t received_transaction_id{
-        utils::network_to_host_order(*reinterpret_cast<uint32_t*>(announce_buffer.data() + 4))
-    };
+    uint32_t received_action{};
+    std::ranges::copy(
+        announce_buffer | std::views::take(4),
+        std::ranges::begin(std::span(reinterpret_cast<std::byte*>(&received_action), 4))
+    );
+    received_action = utils::network_to_host_order(received_action);
 
-    interval_ = std::chrono::seconds{
-        utils::network_to_host_order(*reinterpret_cast<uint32_t*>(announce_buffer.data() + 8))
-    };
+    uint32_t received_transaction_id{};
+    std::ranges::copy(
+        announce_buffer | std::views::drop(4) | std::views::take(4),
+        std::ranges::begin(std::span(reinterpret_cast<std::byte*>(&received_transaction_id), 4))
+    );
+    received_transaction_id = utils::network_to_host_order(received_transaction_id);
+
+    uint32_t interval_seconds{};
+    std::ranges::copy(
+        announce_buffer | std::views::drop(8) | std::views::take(4),
+        std::ranges::begin(std::span(reinterpret_cast<std::byte*>(&interval_seconds), 4))
+    );
+    interval_ = std::chrono::seconds{utils::network_to_host_order(interval_seconds)};
 
     if (received_action != 1 || received_transaction_id != transaction_id) {
         co_return std::unexpected(std::make_error_code(std::errc::protocol_error));

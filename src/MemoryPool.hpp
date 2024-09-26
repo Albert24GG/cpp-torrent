@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <vector>
 
 // Simple Segregated Storage based memory pool
@@ -19,8 +20,16 @@ class MemoryPool {
               free_blocks_{block_count},
               // Align block size to max align_t
               aligned_block_size_{next_aligned(block_size)},
-              pool_(aligned_block_size_ * block_count),
-              next_free_block_{pool_.data()} {};
+              pool_{static_cast<std::byte*>(
+                  std::aligned_alloc(alignof(std::max_align_t), block_count_ * aligned_block_size_)
+              )},
+              next_free_block_{pool_} {};
+
+        MemoryPool(const MemoryPool&)            = delete;
+        MemoryPool& operator=(const MemoryPool&) = delete;
+        MemoryPool(MemoryPool&&)                 = default;
+        MemoryPool& operator=(MemoryPool&&)      = default;
+        ~MemoryPool() { std::free(pool_); }
 
         /**
          * @brief Allocate a block of memory of size n
@@ -47,9 +56,7 @@ class MemoryPool {
          * @return The address of the block
          * @note No bounds checking is performed
          */
-        std::byte* addr_from_index(size_t index) {
-            return pool_.data() + index * aligned_block_size_;
-        }
+        std::byte* addr_from_index(size_t index) { return pool_ + index * aligned_block_size_; }
 
         /**
          * @brief Get the index of the block at the given address
@@ -58,16 +65,14 @@ class MemoryPool {
          * @return The index of the block
          * @note No bounds checking is performed
          */
-        size_t index_from_addr(std::byte* addr) {
-            return (addr - pool_.data()) / aligned_block_size_;
-        }
+        size_t index_from_addr(std::byte* addr) { return (addr - pool_) / aligned_block_size_; }
 
-        size_t                 block_count_;
-        size_t                 aligned_block_size_;
-        size_t                 free_blocks_;
-        size_t                 initialized_blocks_{0};
-        std::vector<std::byte> pool_;
-        std::byte*             next_free_block_{nullptr};
+        size_t     block_count_;
+        size_t     aligned_block_size_;
+        size_t     free_blocks_;
+        size_t     initialized_blocks_{0};
+        std::byte* pool_{nullptr};
+        std::byte* next_free_block_{nullptr};
 };
 
 }  // namespace torrent::utils

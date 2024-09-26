@@ -20,13 +20,28 @@ std::span<std::byte> MockUdpTracker::get_connect_response(
 ) {
     static std::array<std::byte, 16> response_buffer;
 
-    *reinterpret_cast<uint32_t*>(response_buffer.data()) = 0;
+    {
+        uint32_t zero{0U};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&zero), 4), std::ranges::begin(response_buffer)
+        );
+    }
 
-    *reinterpret_cast<uint32_t*>(response_buffer.data() + 4) =
-        utils::host_to_network_order(transaction_id);
+    {
+        uint32_t transaction_id_no{utils::host_to_network_order(transaction_id)};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&transaction_id_no), 4),
+            std::ranges::begin(response_buffer | std::views::drop(4))
+        );
+    }
 
-    *reinterpret_cast<uint64_t*>(response_buffer.data() + 8) =
-        utils::host_to_network_order(connection_id);
+    {
+        uint64_t connection_id_no{utils::host_to_network_order(connection_id)};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&connection_id_no), 8),
+            std::ranges::begin(response_buffer | std::views::drop(8))
+        );
+    }
 
     return response_buffer;
 }
@@ -36,22 +51,48 @@ std::span<std::byte> MockUdpTracker::get_announce_response(
 ) {
     static std::vector<std::byte> response_buffer(20 + 6 * peers_.size());
 
-    *reinterpret_cast<uint32_t*>(response_buffer.data()) =
-        utils::host_to_network_order(static_cast<uint32_t>(1));
+    {
+        uint32_t action_no{utils::host_to_network_order(static_cast<uint32_t>(1U))};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&action_no), 4),
+            std::ranges::begin(response_buffer)
+        );
+    }
 
-    *reinterpret_cast<uint32_t*>(response_buffer.data() + 4) =
-        utils::host_to_network_order(transaction_id);
+    {
+        uint32_t transaction_id_no{utils::host_to_network_order(transaction_id)};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&transaction_id_no), 4),
+            std::ranges::begin(response_buffer | std::views::drop(4))
+        );
+    }
 
-    *reinterpret_cast<uint32_t*>(response_buffer.data() + 8) =
-        utils::host_to_network_order(interval_);
+    {
+        uint32_t interval_no{utils::host_to_network_order(interval_)};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&interval_no), 4),
+            std::ranges::begin(response_buffer | std::views::drop(8))
+        );
+    }
 
-    *reinterpret_cast<uint32_t*>(response_buffer.data() + 12) = 0;
+    {
+        uint32_t leechers{0U};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&leechers), 4),
+            std::ranges::begin(response_buffer | std::views::drop(12))
+        );
+    }
 
-    *reinterpret_cast<uint32_t*>(response_buffer.data() + 16) =
-        utils::host_to_network_order(static_cast<uint32_t>(peers_.size()));
+    {
+        uint32_t seeders{utils::host_to_network_order(static_cast<uint32_t>(peers_.size()))};
+        std::ranges::copy(
+            std::span(reinterpret_cast<std::byte*>(&seeders), 4),
+            std::ranges::begin(response_buffer | std::views::drop(16))
+        );
+    }
 
     auto str_to_byte = [](std::string_view str) -> std::byte {
-        uint8_t value{};
+        uint8_t value{0U};
         // ignore the error code
         std::from_chars(str.data(), str.data() + str.size(), value);
         return static_cast<std::byte>(value);
@@ -71,8 +112,13 @@ std::span<std::byte> MockUdpTracker::get_announce_response(
             );
 
             // append the port number to the peer list
-            *reinterpret_cast<uint16_t*>(response_buffer.data() + 24 + 6 * index) =
-                utils::host_to_network_order(port);
+            {
+                uint16_t port_no{utils::host_to_network_order(port)};
+                std::ranges::copy(
+                    std::span(reinterpret_cast<std::byte*>(&port_no), 2),
+                    std::ranges::begin(response_buffer | std::views::drop(24 + 6 * index))
+                );
+            }
         }
     }
     return {
@@ -88,7 +134,7 @@ void MockUdpTracker::start_server() {
                 udp::endpoint remote_endpoint;
 
                 static std::array<std::byte, 98> receive_buffer;
-                size_t                           received_bytes{};
+                size_t                           received_bytes{0U};
 
                 if (auto res = co_await utils::udp::receive_data(
                         socket_, receive_buffer, remote_endpoint, std::ref(received_bytes)
@@ -101,25 +147,39 @@ void MockUdpTracker::start_server() {
                     continue;
                 }
 
-                uint32_t received_action{utils::network_to_host_order(
-                    *reinterpret_cast<uint32_t*>(receive_buffer.data() + 8)
-                )};
+                uint32_t received_action{0U};
+                std::ranges::copy(
+                    receive_buffer | std::views::drop(8) | std::views::take(4),
+                    std::ranges::begin(std::span(reinterpret_cast<std::byte*>(&received_action), 4))
+                );
+                received_action = utils::network_to_host_order(received_action);
 
                 std::span<std::byte> response_buffer;
 
                 switch (received_action) {
                     case 0: {  // connect
-                        uint64_t received_protocol_id{utils::network_to_host_order(
-                            *reinterpret_cast<uint64_t*>(receive_buffer.data())
-                        )};
+                        uint64_t received_protocol_id{0U};
+                        std::ranges::copy(
+                            receive_buffer | std::views::take(8),
+                            std::ranges::begin(
+                                std::span(reinterpret_cast<std::byte*>(&received_protocol_id), 8)
+                            )
+                        );
+                        received_protocol_id = utils::network_to_host_order(received_protocol_id);
 
                         if (received_protocol_id != static_cast<uint64_t>(0x41727101980)) {
                             break;
                         }
 
-                        uint32_t received_transaction_id{utils::network_to_host_order(
-                            *reinterpret_cast<uint32_t*>(receive_buffer.data() + 12)
-                        )};
+                        uint32_t received_transaction_id{0U};
+                        std::ranges::copy(
+                            receive_buffer | std::views::drop(12) | std::views::take(4),
+                            std::ranges::begin(
+                                std::span(reinterpret_cast<std::byte*>(&received_transaction_id), 4)
+                            )
+                        );
+                        received_transaction_id =
+                            utils::network_to_host_order(received_transaction_id);
 
                         connection_id_ = utils::generate_random<uint64_t>();
 
@@ -132,13 +192,24 @@ void MockUdpTracker::start_server() {
                         if (received_bytes < 98) {
                             break;
                         }
-                        uint64_t received_connection_id{utils::network_to_host_order(
-                            *reinterpret_cast<uint64_t*>(receive_buffer.data())
-                        )};
+                        uint64_t received_connection_id{0U};
+                        std::ranges::copy(
+                            receive_buffer | std::views::take(8),
+                            std::ranges::begin(
+                                std::span(reinterpret_cast<std::byte*>(&received_connection_id), 8)
+                            )
+                        );
+                        received_connection_id =
+                            utils::network_to_host_order(received_connection_id);
 
-                        uint32_t received_num_want{utils::network_to_host_order(
-                            *reinterpret_cast<uint32_t*>(receive_buffer.data() + 92)
-                        )};
+                        uint32_t received_num_want{0U};
+                        std::ranges::copy(
+                            receive_buffer | std::views::drop(92) | std::views::take(4),
+                            std::ranges::begin(
+                                std::span(reinterpret_cast<std::byte*>(&received_num_want), 4)
+                            )
+                        );
+                        received_num_want = utils::network_to_host_order(received_num_want);
 
                         torrent::crypto::Sha1 received_info_hash{
                             torrent::crypto::Sha1::from_raw_data(
@@ -151,9 +222,15 @@ void MockUdpTracker::start_server() {
                             break;
                         }
 
-                        uint32_t received_transaction_id{utils::network_to_host_order(
-                            *reinterpret_cast<uint32_t*>(receive_buffer.data() + 12)
-                        )};
+                        uint32_t received_transaction_id{0U};
+                        std::ranges::copy(
+                            receive_buffer | std::views::drop(12) | std::views::take(4),
+                            std::ranges::begin(
+                                std::span(reinterpret_cast<std::byte*>(&received_transaction_id), 4)
+                            )
+                        );
+                        received_transaction_id =
+                            utils::network_to_host_order(received_transaction_id);
 
                         response_buffer =
                             get_announce_response(received_transaction_id, received_num_want);

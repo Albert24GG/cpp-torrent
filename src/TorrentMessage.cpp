@@ -129,9 +129,7 @@ void serialize_message(const Message& msg, std::span<std::byte> buffer) {
     {
         uint32_t message_size_network{utils::host_to_network_order(message_size)};
         std::ranges::copy(
-            std::span<const std::byte, 4>(
-                reinterpret_cast<const std::byte*>(&message_size_network), 4
-            ),
+            std::span(reinterpret_cast<const std::byte*>(&message_size_network), 4),
             std::ranges::begin(buffer)
         );
     }

@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <asio.hpp>
-#include <asio/experimental/as_tuple.hpp>
+#include <asio/as_tuple.hpp>
 #include <asio/experimental/awaitable_operators.hpp>
 #include <charconv>
 #include <cstdint>
@@ -23,7 +23,7 @@
 #include <vector>
 
 // Use the nothrow awaitable completion token to avoid exceptions
-constexpr auto use_nothrow_awaitable = asio::experimental::as_tuple(asio::use_awaitable);
+constexpr auto use_nothrow_awaitable = asio::as_tuple(asio::use_awaitable);
 
 using namespace asio::experimental::awaitable_operators;
 namespace this_coro = asio::this_coro;
@@ -32,8 +32,8 @@ using asio::ip::udp;
 
 namespace {
 
-auto extract_peers(std::span<std::byte> peers_buffer
-) -> awaitable<std::expected<std::vector<torrent::PeerInfo>, std::error_code>> {
+auto extract_peers(std::span<std::byte> peers_buffer)
+    -> awaitable<std::expected<std::vector<torrent::PeerInfo>, std::error_code>> {
     if (peers_buffer.size() % 6 != 0) {
         co_return std::unexpected(std::make_error_code(std::errc::protocol_error));
     }

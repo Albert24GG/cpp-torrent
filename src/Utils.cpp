@@ -3,7 +3,7 @@
 #include "Logger.hpp"
 
 #include <asio.hpp>
-#include <asio/experimental/as_tuple.hpp>
+#include <asio/as_tuple.hpp>
 #include <asio/experimental/awaitable_operators.hpp>
 #include <expected>
 #include <functional>
@@ -12,14 +12,14 @@
 #include <system_error>
 
 // Use the nothrow awaitable completion token to avoid exceptions
-constexpr auto use_nothrow_awaitable = asio::experimental::as_tuple(asio::use_awaitable);
+constexpr auto use_nothrow_awaitable = asio::as_tuple(asio::use_awaitable);
 
 using namespace asio::experimental::awaitable_operators;
 
 namespace torrent::utils {
 
-auto watchdog(asio::chrono::steady_clock::time_point& deadline
-) -> asio::awaitable<std::expected<void, std::error_code>> {
+auto watchdog(asio::chrono::steady_clock::time_point& deadline)
+    -> asio::awaitable<std::expected<void, std::error_code>> {
     asio::steady_timer timer{co_await asio::this_coro::executor};
 
     auto now = std::chrono::steady_clock::now();

@@ -3,14 +3,14 @@
 #include "Utils.hpp"
 
 #include <asio.hpp>
-#include <asio/experimental/as_tuple.hpp>
+#include <asio/as_tuple.hpp>
 #include <asio/experimental/awaitable_operators.hpp>
 #include <cstddef>
 #include <ranges>
 #include <span>
 
 // Use the nothrow awaitable completion token to avoid exceptions
-constexpr auto use_nothrow_awaitable = asio::experimental::as_tuple(asio::use_awaitable);
+constexpr auto use_nothrow_awaitable = asio::as_tuple(asio::use_awaitable);
 
 using asio::ip::udp;
 namespace utils = torrent::utils;

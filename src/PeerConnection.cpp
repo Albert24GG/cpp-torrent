@@ -8,7 +8,7 @@
 #include "Utils.hpp"
 
 #include <asio.hpp>
-#include <asio/experimental/as_tuple.hpp>
+#include <asio/as_tuple.hpp>
 #include <asio/experimental/awaitable_operators.hpp>
 #include <chrono>
 #include <expected>
@@ -23,7 +23,7 @@ namespace this_coro = asio::this_coro;
 using namespace asio::experimental::awaitable_operators;
 
 // Use the nothrow awaitable completion token to avoid exceptions
-constexpr auto use_nothrow_awaitable = asio::experimental::as_tuple(use_awaitable);
+constexpr auto use_nothrow_awaitable = asio::as_tuple(use_awaitable);
 
 namespace torrent::peer {
 
@@ -54,8 +54,8 @@ auto PeerConnection::receive_handshake()
     }
 }
 
-auto PeerConnection::send_handshake(const message::HandshakeMessage& handshake_message
-) -> awaitable<std::expected<void, std::error_code>> {
+auto PeerConnection::send_handshake(const message::HandshakeMessage& handshake_message)
+    -> awaitable<std::expected<void, std::error_code>> {
     LOG_DEBUG("Sending handshake message to peer {}:{}", peer_info_.ip, peer_info_.port);
 
     auto res = co_await utils::tcp::send_data_with_timeout(
@@ -69,8 +69,10 @@ auto PeerConnection::establish_connection() -> awaitable<std::expected<void, std
     LOG_DEBUG("Establishing connection with peer {}:{}", peer_info_.ip, peer_info_.port);
 
     // Resolve the peer endpoint
-    tcp::endpoint peer_endpoint = *tcp::resolver(co_await this_coro::executor)
-                                       .resolve(peer_info_.ip, std::to_string(peer_info_.port));
+    tcp::endpoint peer_endpoint = tcp::resolver(co_await this_coro::executor)
+                                      .resolve(peer_info_.ip, std::to_string(peer_info_.port))
+                                      .begin()
+                                      ->endpoint();
 
     std::chrono::steady_clock::time_point deadline{
         std::chrono::steady_clock::now() + duration::CONNECTION_TIMEOUT

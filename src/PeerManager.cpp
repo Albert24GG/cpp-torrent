@@ -6,7 +6,7 @@
 #include "Utils.hpp"
 
 #include <asio.hpp>
-#include <asio/experimental/as_tuple.hpp>
+#include <asio/as_tuple.hpp>
 #include <exception>
 #include <thread>
 
@@ -15,7 +15,7 @@ using asio::co_spawn;
 namespace this_coro = asio::this_coro;
 
 // Use the nothrow awaitable completion token to avoid exceptions
-constexpr auto use_nothrow_awaitable = asio::experimental::as_tuple(asio::use_awaitable);
+constexpr auto use_nothrow_awaitable = asio::as_tuple(asio::use_awaitable);
 
 namespace torrent {
 
